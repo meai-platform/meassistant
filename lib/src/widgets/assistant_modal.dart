@@ -9,7 +9,6 @@ import 'package:shimmer/shimmer.dart';
 import 'dart:ui';
 import '../config/assistant_config.dart';
 import '../models/assistant_response.dart';
-import '../models/conversation_models.dart';
 import '../services/assistant_service.dart';
 import '../stores/assistant_store.dart';
 import 'typing_text.dart';
@@ -362,7 +361,7 @@ class _AssistantModalState extends State<AssistantModal>
         children: [
           Expanded(
             flex: _isKeyboardVisible ? 6 : 1,
-            child: Container(),
+            child: const SizedBox.shrink(),
           ),
           _buildImage(
             widget.config.logoPath ?? 'packages/meai_assistant/assets/images/ai_button.png',
@@ -389,7 +388,7 @@ class _AssistantModalState extends State<AssistantModal>
             ),
             textAlign: TextAlign.center,
           ),
-          Expanded(child: Container()),
+          Expanded(child: const SizedBox.shrink()),
           Observer(
             builder: (_) {
               // Use API suggested prompts if available, otherwise fall back to config
@@ -592,7 +591,7 @@ class _AssistantModalState extends State<AssistantModal>
               !message.isUser &&
               message.assistantResponse != null &&
               message.assistantResponse!.suggestedResponses != null)
-            Container(
+            SizedBox(
               width: MediaQuery.of(context).size.width,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,

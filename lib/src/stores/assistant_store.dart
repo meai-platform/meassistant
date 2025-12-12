@@ -14,7 +14,7 @@ abstract class _AssistantStore with Store {
   final AssistantApiService _assistantApiService;
   final AssistantService? _assistantService;
 
-  _AssistantStore(this._assistantApiService, [this._assistantService]);
+  _AssistantStore(this._assistantApiService, this._assistantService);
 
   @observable
   ObservableList<ChatMessage> messages = ObservableList();

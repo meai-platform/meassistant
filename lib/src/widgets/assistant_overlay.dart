@@ -13,12 +13,12 @@ class AssistantOverlay extends StatelessWidget {
   final AssistantStore assistantStore;
 
   const AssistantOverlay({
-    Key? key,
+    super.key,
     required this.child,
     required this.config,
     required this.assistantService,
     required this.assistantStore,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
