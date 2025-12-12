@@ -1,16 +1,19 @@
 # MeAI Assistant Plugin
 
-A Flutter plugin for embedding a customizable AI assistant in your app. This plugin provides a complete assistant UI with floating button, modal interface, and full customization options.
+A Flutter plugin designed specifically for banks and financial institutions to embed an intelligent AI assistant into their mobile banking applications. MeAI Assistant enables banks to provide 24/7 customer support, financial guidance, and personalized banking assistance directly within their apps.
 
 ## Features
 
-- 🎨 **Fully Customizable**: Customize assistant name, logos, colors, and text
-- 💬 **Chat Interface**: Beautiful chat UI with typing animations
-- 🎯 **Floating Button**: Easy-to-access floating action button
-- 🔄 **State Management**: Built-in MobX store for state management
-- 🌈 **Color Schemes**: Pre-built color schemes or create your own
-- 📱 **Responsive**: Works on all screen sizes
-- ⌨️ **Keyboard Aware**: Automatically adjusts for keyboard visibility
+- 🏦 **Banking-Focused**: Purpose-built for financial institutions with secure authentication and compliance-ready architecture
+- 💬 **Intelligent Chat Interface**: Beautiful, conversational UI that helps customers with account inquiries, transaction history, spending analysis, and financial advice
+- 🎯 **Always Accessible**: Floating action button ensures customers can get help anytime, anywhere within the banking app
+- 🔒 **Secure & Compliant**: Built-in support for JWT authentication and SDK authentication with HMAC-SHA256, ensuring secure communication with banking APIs
+- 🎨 **Brand Customization**: Fully customizable to match your bank's branding with custom logos, colors, fonts, and messaging
+- 📊 **Financial Insights**: Display spending patterns, account summaries, recurring transactions, and personalized financial recommendations
+- 📱 **Responsive Design**: Seamlessly works across all device sizes and screen orientations
+- ⌨️ **Keyboard Aware**: Automatically adjusts UI when keyboard appears for optimal user experience
+- 🔄 **State Management**: Robust MobX-based state management for reliable performance
+- 🎭 **Pre-built Themes**: Ready-to-use color schemes or create custom themes that match your bank's visual identity
 
 ## Installation
 
@@ -26,19 +29,6 @@ Then run:
 ```bash
 flutter pub get
 ```
-
-### From Git (Development)
-
-If you want to use the latest version from Git:
-
-```yaml
-dependencies:
-  meai_assistant:
-    git:
-      url: https://github.com/yourusername/meai_assistant.git
-      ref: main
-```
-
 
 ## Quick Start
 
@@ -58,7 +48,7 @@ class MyApp extends StatelessWidget {
     final assistant = MeaiAssistant(
       config: AssistantConfig(
         assistantName: 'My Assistant',
-        baseUrl: 'https://your-api-url.com/',
+        baseUrl: 'https://your-dedicated-meai-api-url.com/',
         colorScheme: AssistantColorScheme.purple,
         introText: "Hello! I'm your smart money assistant.",
         textFieldHint: "Ask something...",
@@ -431,15 +421,11 @@ Color scheme for the assistant UI.
 - `AssistantColorScheme.green`: Green theme
 - `AssistantColorScheme({...})`: Custom theme
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ## License
 
 This project is licensed under the MIT License.
 
 ## Support
 
-For issues, questions, or contributions, please open an issue on the GitHub repository.
+For issues, questions, or contributions, please reach out your meAi account manager or open an issue on the GitHub repository.
 

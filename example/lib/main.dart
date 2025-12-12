@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
     final assistant = MeaiAssistant(
       config: AssistantConfig(
         assistantName: 'meAssistant',
-        baseUrl: 'https://76ba0ef4eed4.ngrok-free.app/',
+        baseUrl: 'https://[bank-unique-code]-api.meplatform.ai/',
         customerId: 'customer123', // Required: Customer ID for API requests
         lang: 'en', // Language preference: 'en' or 'ar'
         // SDK Authentication credentials (required for mebank SDK)

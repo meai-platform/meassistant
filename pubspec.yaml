@@ -1,5 +1,5 @@
 name: meai_assistant
-description: A Flutter plugin for embedding a customizable AI assistant in your app. Allows easy customization of assistant name, logos, colors, and text.
+description: A Flutter plugin for embedding a MeAi assistant in your banking app. Allows easy customization of assistant name, logos, colors, and text.
 version: 1.0.0
 homepage: https://github.com/yourusername/meai_assistant
 repository: https://github.com/yourusername/meai_assistant

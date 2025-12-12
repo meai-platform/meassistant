@@ -47,3 +47,5 @@ app.*.map.json
 *.g.dart
 *.freezed.dart
 
+PUBLISHING.md
+PRE_PUBLISH_CHECKLIST.md
