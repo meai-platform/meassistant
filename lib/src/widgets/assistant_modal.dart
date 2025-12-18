@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:mobx/mobx.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import 'dart:ui';
@@ -44,10 +44,14 @@ class _AssistantModalState extends State<AssistantModal>
 
   bool _isKeyboardVisible = false;
   bool _isInConversation = false;
-  bool _isTyping = false;
   bool _isFirstTime = true;
   bool _isDontAnimateLastMsg = false;
   bool _isAnimatingText = false;
+  String _loadingMessage = 'Analyzing your message';
+  Timer? _loadingMessageTimer;
+  DateTime? _typingStartTime;
+  bool _isTimerRunning = false;
+  ReactionDisposer? _loadingStateReaction;
 
   @override
   void initState() {
@@ -93,6 +97,24 @@ class _AssistantModalState extends State<AssistantModal>
       });
     });
 
+    // Listen to loading state changes for timer management
+    _loadingStateReaction = reaction<bool>(
+      (_) => widget.assistantStore.isLoadingAssistantResponse,
+      (isLoading) {
+        if (isLoading && !_isTimerRunning) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && widget.assistantStore.isLoadingAssistantResponse) {
+              _startLoadingMessageTimer();
+            }
+          });
+        } else if (!isLoading && _isTimerRunning) {
+          _loadingMessageTimer?.cancel();
+          _loadingMessageTimer = null;
+          _isTimerRunning = false;
+        }
+      },
+    );
+
     // Automatically create conversation when modal opens
     _createConversationIfNeeded();
   }
@@ -115,6 +137,8 @@ class _AssistantModalState extends State<AssistantModal>
     _textController.dispose();
     _scrollController.dispose();
     keyboardSubscription.cancel();
+    _loadingMessageTimer?.cancel();
+    _loadingStateReaction?.call();
     super.dispose();
   }
 
@@ -138,7 +162,11 @@ class _AssistantModalState extends State<AssistantModal>
         timestamp: DateTime.now(),
       ));
       _isInConversation = true;
-      _isTyping = true;
+      // Reset loading message and cancel any existing timer for new prompt
+      _loadingMessage = 'Analyzing your message';
+      _loadingMessageTimer?.cancel();
+      _loadingMessageTimer = null;
+      _isTimerRunning = false;
     });
 
     _conversationAnimationController.forward();
@@ -151,7 +179,6 @@ class _AssistantModalState extends State<AssistantModal>
         await widget.assistantStore.sendPrompt(userMessage.trim());
 
     setState(() {
-      _isTyping = false;
       widget.assistantStore.messages.add(ChatMessage(
         text: response!.textResponse,
         isUser: false,
@@ -181,70 +208,78 @@ class _AssistantModalState extends State<AssistantModal>
 
   @override
   Widget build(BuildContext context) {
+    if (_isFirstTime) {
+      _isFirstTime = false;
+      _isInConversation = widget.assistantStore.messages.isNotEmpty;
+      if (_isInConversation) {
+        _isDontAnimateLastMsg = true;
+        _conversationAnimationController.forward();
+      }
+    }
+    
     return Overlay(
       initialEntries: [
         OverlayEntry(
-          builder: (context) => Observer(
-            builder: (_) {
-              if (_isFirstTime) {
-                _isFirstTime = false;
-                _isInConversation = widget.assistantStore.messages.isNotEmpty;
-                if (_isInConversation) {
-                  _isDontAnimateLastMsg = true;
-                  _conversationAnimationController.forward();
-                }
-              }
-              return AnimatedBuilder(
+          builder: (context) => AnimatedBuilder(
                 animation: _animationController,
                 builder: (context, child) {
-                  return Scaffold(
-                    backgroundColor: Colors.transparent,
-                    resizeToAvoidBottomInset: true,
-                    body: Stack(
-                      children: [
-                        FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: GestureDetector(
-                            onTap: _closeModal,
-                            behavior: HitTestBehavior.opaque,
-                            child: Container(
-                              width: double.infinity,
-                              height: double.infinity,
-                              color: widget.config.effectiveColorScheme.overlayBackgroundColor,
+                  return PopScope(
+                    canPop: false,
+                    onPopInvoked: (didPop) {
+                      if (!didPop) {
+                        _closeModal();
+                      }
+                    },
+                    child: Scaffold(
+                      backgroundColor: Colors.transparent,
+                      resizeToAvoidBottomInset: true,
+                      body: Stack(
+                        children: [
+                          FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: GestureDetector(
+                              onTap: _closeModal,
+                              behavior: HitTestBehavior.opaque,
+                              child: Container(
+                                width: double.infinity,
+                                height: double.infinity,
+                                color: widget.config.effectiveColorScheme.overlayBackgroundColor,
+                              ),
                             ),
                           ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 1),
-                              end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: _animationController,
-                              curve: Curves.easeOutCubic,
-                            )),
-                            child: FadeTransition(
-                              opacity: _fadeAnimation,
-                              child: _buildBottomSheetContent(),
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 1),
+                                end: Offset.zero,
+                              ).animate(CurvedAnimation(
+                                parent: _animationController,
+                                curve: Curves.easeOutCubic,
+                              )),
+                              child: FadeTransition(
+                                opacity: _fadeAnimation,
+                                child: _buildBottomSheetContent(),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },
-              );
-            },
-          ),
+              ),
         )
       ],
     );
   }
 
   Widget _buildBottomSheetContent() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final modalHeight = _isKeyboardVisible ? screenHeight * 0.5 : screenHeight * 0.9;
+    
     return GestureDetector(
       onTap: () {
         // Unfocus the text field if it has focus
@@ -252,23 +287,23 @@ class _AssistantModalState extends State<AssistantModal>
           _textFieldFocusNode.unfocus();
         }
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: double.infinity,
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height *
-              (_isKeyboardVisible ? 0.5 : 0.9),
-          minHeight: MediaQuery.of(context).size.height *
-              (_isKeyboardVisible ? 0.5 : 0.9),
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
+      child: RepaintBoundary(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          width: double.infinity,
+          constraints: BoxConstraints(
+            maxHeight: modalHeight,
+            minHeight: modalHeight,
           ),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            child: RepaintBoundary(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
               decoration: BoxDecoration(
                 color: widget.config.effectiveColorScheme.modalBackgroundColor,
                 borderRadius: const BorderRadius.only(
@@ -327,16 +362,18 @@ class _AssistantModalState extends State<AssistantModal>
                   ),
                   const SizedBox(height: 10),
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        FocusScope.of(context).unfocus();
-                      },
-                      behavior: HitTestBehavior.translucent,
-                    child: Stack(
-                      children: [
-                        if (!_isInConversation) _buildWelcomeScreen(),
-                        if (_isInConversation) _buildConversationScreen(),
-                      ],
+                    child: RepaintBoundary(
+                      child: GestureDetector(
+                        onTap: () {
+                          FocusScope.of(context).unfocus();
+                        },
+                        behavior: HitTestBehavior.translucent,
+                        child: Stack(
+                          children: [
+                            if (!_isInConversation) _buildWelcomeScreen(),
+                            if (_isInConversation) _buildConversationScreen(),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -350,7 +387,8 @@ class _AssistantModalState extends State<AssistantModal>
           ),
         ),
       ),
-    );
+      ),
+    ));
   }
 
   Widget _buildWelcomeScreen() {
@@ -455,42 +493,50 @@ class _AssistantModalState extends State<AssistantModal>
   }
 
   Widget _buildConversationScreen() {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _conversationAnimationController,
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                itemCount: widget.assistantStore.messages.length +
-                    (_isTyping ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == widget.assistantStore.messages.length &&
-                      _isTyping) {
-                    return _buildTypingIndicator();
-                  }
-                  return _buildMessageBubble(
-                    widget.assistantStore.messages[index],
-                    index == widget.assistantStore.messages.length - 1 &&
-                        !_isDontAnimateLastMsg,
-                    index == 0,
-                  );
-                },
+    return Observer(
+      builder: (_) {
+        return RepaintBoundary(
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(
+              opacity: _conversationAnimationController,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      itemCount: widget.assistantStore.messages.length +
+                          (widget.assistantStore.isLoadingAssistantResponse ? 1 : 0),
+                      cacheExtent: 500,
+                      itemBuilder: (context, index) {
+                        if (index == widget.assistantStore.messages.length &&
+                            widget.assistantStore.isLoadingAssistantResponse) {
+                          return _buildTypingIndicator();
+                        }
+                        return RepaintBoundary(
+                          child: _buildMessageBubble(
+                            widget.assistantStore.messages[index],
+                            index == widget.assistantStore.messages.length - 1 &&
+                                !_isDontAnimateLastMsg,
+                            index == 0,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildMessageBubble(ChatMessage message, bool isLast, bool isFirst) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+    return Container(
       margin: const EdgeInsets.symmetric(vertical: 0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
@@ -559,6 +605,9 @@ class _AssistantModalState extends State<AssistantModal>
                           scrollController: _scrollController,
                           speed: const Duration(milliseconds: 10),
                           showFullContentImmediately: message.isAnimated,
+                          assistantResponse: message.assistantResponse,
+                          customObjectWidgetBuilder: widget.config.customObjectWidgetBuilder,
+                          fontFamily: widget.config.fontFamily,
                           style: TextStyle(
                             fontSize: 15,
                             color: widget.config.effectiveColorScheme.assistantMessageTextColor,
@@ -610,12 +659,68 @@ class _AssistantModalState extends State<AssistantModal>
     );
   }
 
+  void _startLoadingMessageTimer() {
+    _loadingMessageTimer?.cancel();
+    _typingStartTime = DateTime.now();
+    _loadingMessage = 'Analyzing your message';
+    _isTimerRunning = true;
+    
+    // Use 1 second interval since we only check seconds
+    _loadingMessageTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!widget.assistantStore.isLoadingAssistantResponse || !mounted) {
+        timer.cancel();
+        _loadingMessageTimer = null;
+        _isTimerRunning = false;
+        return;
+      }
+      
+      final elapsed = DateTime.now().difference(_typingStartTime!);
+      final seconds = elapsed.inSeconds;
+      
+      String newMessage;
+      if (seconds < 5) {
+        newMessage = 'Analyzing your message';
+      } else if (seconds < 7) {
+        newMessage = 'Fetching personalized relevant data';
+      } else if (seconds < 10) {
+        newMessage = 'Analyzing data';
+      } else {
+        newMessage = 'Preparing final response';
+      }
+      
+      if (newMessage != _loadingMessage && mounted) {
+        setState(() {
+          _loadingMessage = newMessage;
+        });
+      }
+    });
+  }
+
   Widget _buildTypingIndicator() {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Lottie.asset(widget.config.typingIndicatorLottiePath ?? "packages/meai_assistant/assets/lottie/ai-loop.json"),
+          Lottie.asset(widget.config.typingIndicatorLottiePath ?? "packages/meai_assistant/assets/lottie/ai-loop-cropped.json"),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey[600]!,
+              highlightColor: Colors.grey[300]!,
+              child: Text(
+                _loadingMessage,
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: widget.config.effectiveColorScheme.assistantMessageTextColor,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

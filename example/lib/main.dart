@@ -42,11 +42,11 @@ class MyApp extends StatelessWidget {
     final assistant = MeaiAssistant(
       config: AssistantConfig(
         assistantName: 'meAssistant',
-        baseUrl: 'https://[bank-unique-code]-api.meplatform.ai/',
+        baseUrl: 'https://76ba0ef4eed4.ngrok-free.app/',
         customerId: 'customer123', // Required: Customer ID for API requests
         lang: 'en', // Language preference: 'en' or 'ar'
         // SDK Authentication credentials (required for mebank SDK)
-        clientId: 'client-test-123',
+        clientId: 'client-test-1234',
         // HMAC is calculated by your backend
         // Backend should calculate: HMAC-SHA256(clientSecret, timestamp + clientId + packageName + customerId)
         getHmac: (timestamp, clientId, packageName, customerId) async {

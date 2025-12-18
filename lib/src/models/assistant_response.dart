@@ -3,8 +3,8 @@ import 'dart:convert';
 /// Response model from the assistant API (SendPromptPublicResponse)
 class AssistantResponse {
   final String textResponse;
-  final List<String>? customObjectsTypes;
-  final List<dynamic>? customObjects;
+  final dynamic customObjectsTypes; // Can be List<String> or Map<String, String>
+  final dynamic customObjects; // Can be List<dynamic> or Map<String, dynamic>
   final List<String>? suggestedResponses;
   final String? sentiment;
   final double? confidence;
@@ -43,8 +43,9 @@ class AssistantResponse {
 
     return AssistantResponse(
       textResponse: json["textResponse"] as String? ?? "",
-      customObjectsTypes: parseStringList(json["customObjectsTypes"]),
-      customObjects: json["customObjects"] as List<dynamic>?,
+      // Keep as dynamic to support both List and Map formats
+      customObjectsTypes: json["customObjectsTypes"],
+      customObjects: json["customObjects"],
       suggestedResponses: parseStringList(json["suggestedResponses"]),
       sentiment: json["sentiment"] as String?,
       confidence: parseDouble(json["confidence"]),

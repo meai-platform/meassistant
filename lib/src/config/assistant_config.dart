@@ -86,6 +86,11 @@ class AssistantConfig {
   /// Font family to use throughout the assistant UI (default: 'ReadexPro')
   final String? fontFamily;
 
+  /// Custom widget builder for custom objects in assistant responses
+  /// Parameters: objectType (String), objectData (dynamic)
+  /// Returns: Widget to display for the custom object, or null to use default
+  final Widget? Function(String objectType, dynamic objectData)? customObjectWidgetBuilder;
+
   /// Enable debug logging throughout the SDK (default: false)
   final bool debug;
 
@@ -97,7 +102,7 @@ class AssistantConfig {
     this.suggestionIconPath = 'packages/meai_assistant/assets/images/ic_ai.png', // Default suggestion card icon
     this.transitionLastFramePath = 'packages/meai_assistant/assets/images/me-assistant-last-frame.png', // Default transition last frame
     this.transitionLottiePath = 'packages/meai_assistant/assets/lottie/ai-transition-2.json', // Default transition animation
-    this.typingIndicatorLottiePath = 'packages/meai_assistant/assets/lottie/ai-loop.json', // Default typing indicator animation
+    this.typingIndicatorLottiePath = 'packages/meai_assistant/assets/lottie/ai-loop-cropped.json', // Default typing indicator animation
     this.colorScheme, // Optional: use predefined color scheme
     // Individual color overrides (used if colorScheme is null, otherwise colorScheme takes precedence)
     this.primaryColor,
@@ -124,6 +129,7 @@ class AssistantConfig {
     this.floatingButtonRightSpacing = 20.0,
     this.suggestionPrompts,
     this.fontFamily,
+    this.customObjectWidgetBuilder,
     this.debug = false,
   });
 
@@ -187,6 +193,8 @@ class AssistantConfig {
     double? floatingButtonBottomSpacing,
     double? floatingButtonRightSpacing,
     List<String>? suggestionPrompts,
+    String? fontFamily,
+    Widget? Function(String objectType, dynamic objectData)? customObjectWidgetBuilder,
     bool? debug,
   }) {
     return AssistantConfig(
@@ -225,6 +233,7 @@ class AssistantConfig {
           floatingButtonRightSpacing ?? this.floatingButtonRightSpacing,
       suggestionPrompts: suggestionPrompts ?? this.suggestionPrompts,
       fontFamily: fontFamily ?? this.fontFamily,
+      customObjectWidgetBuilder: customObjectWidgetBuilder ?? this.customObjectWidgetBuilder,
       debug: debug ?? this.debug,
     );
   }
