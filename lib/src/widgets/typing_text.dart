@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/assistant_response.dart';
 import 'cards/transaction_card.dart';
@@ -108,15 +109,15 @@ class _TypingTextState extends State<TypingText> {
 
       // Get the object index from the placeholder
       int objectIndex = int.parse(match.group(1)!) - 1; // Convert to 0-based index
-      usedObjectIndices.add(objectIndex);
-
+      
       Widget? customWidget = _getCustomWidgetByIndex(objectIndex);
 
       if (customWidget != null) {
+        usedObjectIndices.add(objectIndex);
         segments.add(TextSegment.widget(customWidget));
       } else {
-        // If no custom widget found, keep the placeholder as text
-        segments.add(TextSegment.text(match.group(0)!));
+        // If no custom widget found, remove the placeholder from the text
+        // Don't add anything to segments, effectively removing it
       }
 
       lastEnd = match.end;
@@ -183,20 +184,37 @@ class _TypingTextState extends State<TypingText> {
 
     if (customObjects == null || customObjectsTypes == null) return null;
 
-    // Handle List format
-    if (customObjects is List && customObjectsTypes is List) {
-      if (index < customObjects.length && index < customObjectsTypes.length) {
-        return _buildWidgetFromTypeAndData(customObjectsTypes[index], customObjects[index]);
+    try {
+      // Handle List format
+      if (customObjects is List && customObjectsTypes is List) {
+        if (index >= 0 && index < customObjects.length && index < customObjectsTypes.length) {
+          return _buildWidgetFromTypeAndData(customObjectsTypes[index], customObjects[index]);
+        }
       }
-    }
-    // Handle Map format with numeric keys
-    else if (customObjects is Map && customObjectsTypes is Map) {
-      String key = index.toString();
-      if (customObjects.containsKey(key) && customObjectsTypes.containsKey(key)) {
-        return _buildWidgetFromTypeAndData(customObjectsTypes[key], customObjects[key]);
+      // Handle Map format with numeric keys
+      else if (customObjects is Map && customObjectsTypes is Map) {
+        String key = index.toString();
+        if (customObjects.containsKey(key) && customObjectsTypes.containsKey(key)) {
+          return _buildWidgetFromTypeAndData(customObjectsTypes[key], customObjects[key]);
+        }
       }
+    } catch (e) {
+      // If there's an error building the widget, return null to fall back to default
+      return null;
     }
 
+    return null;
+  }
+
+  /// Helper function to safely convert a value to double.
+  /// Handles both num and String containing numbers.
+  double? _parseToDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      final parsed = double.tryParse(value);
+      return parsed;
+    }
     return null;
   }
 
@@ -222,7 +240,7 @@ class _TypingTextState extends State<TypingText> {
           transactionDescription: data['transactionDescription'] as String?,
           categoryImageUrl: data['categoryImageUrl'] as String?,
           entryType: data['entryType'] as String?,
-          amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
+          amount: _parseToDouble(data['amount']) ?? 0.0,
           currency: data['currency'] as String? ?? 'BHD',
           fontFamily: widget.fontFamily,
         );
@@ -232,9 +250,9 @@ class _TypingTextState extends State<TypingText> {
           merchantImageUrl: data['merchantImageUrl'] as String?,
           merchantName: data['merchantName'] as String?,
           categoryName: data['categoryName'] as String?,
-          recurringTransactionAmount: (data['recurringTransactionAmount'] as num?)?.toDouble() ?? 0.0,
+          recurringTransactionAmount: _parseToDouble(data['recurringTransactionAmount']) ?? 0.0,
           currency: data['currency'] as String? ?? 'BHD',
-          overallSpentAmount: (data['overallSpentAmount'] as num?)?.toDouble() ?? 0.0,
+          overallSpentAmount: _parseToDouble(data['overallSpentAmount']) ?? 0.0,
           numberOfTransactions: data['numberOfTransactions'] as int? ?? 0,
           firstPaymentDate: data['firstPaymentDate'] as String? ?? '',
           expectedNextPaymentDate: data['expectedNextPaymentDate'] as String? ?? '',
@@ -245,9 +263,9 @@ class _TypingTextState extends State<TypingText> {
         return SavingGoalCard(
           name: data['name'] as String? ?? 'Savings Goal',
           imageUrl: data['imageUrl'] as String?,
-          amountSaved: (data['amountSaved'] as num?)?.toDouble() ?? 0.0,
-          amountRemaining: (data['amountRemaining'] as num?)?.toDouble() ?? 0.0,
-          targetAmount: (data['targetAmount'] as num?)?.toDouble() ?? 0.0,
+          amountSaved: _parseToDouble(data['amountSaved']) ?? 0.0,
+          amountRemaining: _parseToDouble(data['amountRemaining']) ?? 0.0,
+          targetAmount: _parseToDouble(data['targetAmount']) ?? 0.0,
           targetDate: data['targetDate'] as String? ?? '',
           fontFamily: widget.fontFamily,
         );
@@ -257,10 +275,10 @@ class _TypingTextState extends State<TypingText> {
           title: data['title'] as String? ?? 'Investment',
           imageUrl: data['imageUrl'] as String?,
           period: data['period'] as String?,
-          expectedProfitRate: (data['expectedProfitRate'] as num?)?.toDouble() ?? 0.0,
-          amount: (data['amount'] as num?)?.toDouble(),
-          expectedProfitAtMaturity: (data['expectedProfitAtMaturity'] as num?)?.toDouble(),
-          amountAtMaturityWithProfit: (data['amountAtMaturityWithProfit'] as num?)?.toDouble(),
+          expectedProfitRate: _parseToDouble(data['expectedProfitRate']) ?? 0.0,
+          amount: _parseToDouble(data['amount']),
+          expectedProfitAtMaturity: _parseToDouble(data['expectedProfitAtMaturity']),
+          amountAtMaturityWithProfit: _parseToDouble(data['amountAtMaturityWithProfit']),
           fontFamily: widget.fontFamily,
         );
 
@@ -268,7 +286,7 @@ class _TypingTextState extends State<TypingText> {
         return AmountValueCard(
           title: data['title'] as String? ?? 'Amount',
           imageUrl: data['imageUrl'] as String?,
-          amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
+          amount: _parseToDouble(data['amount']) ?? 0.0,
           currency: data['currency'] as String? ?? 'BHD',
           fontFamily: widget.fontFamily,
         );
@@ -281,8 +299,8 @@ class _TypingTextState extends State<TypingText> {
           categoryName: data['categoryName'] as String?,
           descriptionOfCurrentStatus: data['descriptionOfCurrentStatus'] as String,
           currency: data['currency'] as String? ?? 'BHD',
-          limitAmountOnCategory: (data['limitAmountOnCategory'] as num?)?.toDouble() ?? 0.0,
-          currentSpendOnCategory: (data['currentSpendOnCategory'] as num?)?.toDouble() ?? 0.0,
+          limitAmountOnCategory: _parseToDouble(data['limitAmountOnCategory']) ?? 0.0,
+          currentSpendOnCategory: _parseToDouble(data['currentSpendOnCategory']) ?? 0.0,
           fontFamily: widget.fontFamily,
         );
 
@@ -293,20 +311,40 @@ class _TypingTextState extends State<TypingText> {
         );
 
       case 'TABLE':
-        // Convert tableRows to List<List<String>>
-        List<List<String>> tableRows = [];
-        if (data['tableRows'] != null && data['tableRows'] is List) {
-          tableRows = (data['tableRows'] as List).map((row) {
-            if (row is List) {
-              return row.map((cell) => cell.toString()).toList();
+        try {
+          // Convert tableRows to List<List<String>>
+          List<List<String>> tableRows = [];
+          
+          if (data is Map && data.containsKey('tableRows')) {
+            final rowsData = data['tableRows'];
+            if (rowsData != null && rowsData is List) {
+              tableRows = rowsData.map((row) {
+                if (row is List) {
+                  return row.map((cell) => cell.toString()).toList();
+                } else if (row is Map) {
+                  // If row is a map, convert values to list
+                  return row.values.map((cell) => cell.toString()).toList();
+                }
+                return <String>[];
+              }).where((row) => row.isNotEmpty).toList();
             }
-            return <String>[];
-          }).toList();
+          }
+          
+          // Only return TableCard if we have valid rows
+          if (tableRows.isNotEmpty) {
+            return TableCard(
+              tableRows: tableRows,
+              fontFamily: widget.fontFamily,
+            );
+          }
+        } catch (e) {
+          // If there's an error, fall through to default widget
+          debugPrint('Error building TABLE widget: $e');
+          debugPrint('Table data: $data');
         }
-        return TableCard(
-          tableRows: tableRows,
-          fontFamily: widget.fontFamily,
-        );
+        
+        // Fall back to default widget if table data is invalid
+        return _buildDefaultWidget(data);
 
       default:
         return _buildDefaultWidget(data);
@@ -390,11 +428,14 @@ class _TypingTextState extends State<TypingText> {
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.scrollController.hasClients) {
-        widget.scrollController.animateTo(
-          widget.scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-        );
+        final maxScroll = widget.scrollController.position.maxScrollExtent;
+        if (maxScroll.isFinite && maxScroll >= 0) {
+          widget.scrollController.animateTo(
+            maxScroll,
+            duration: const Duration(milliseconds: 100),
+            curve: Curves.easeOut,
+          );
+        }
       }
     });
   }

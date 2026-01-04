@@ -73,7 +73,7 @@ class TransactionCard extends StatelessWidget {
                               color: const Color(0xFFFED401).withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.account_balance_wallet, size: 18),
+                            child: const Icon(Icons.payment, size: 18),
                           );
                         },
                       ),
@@ -86,7 +86,7 @@ class TransactionCard extends StatelessWidget {
                           color: const Color(0xFFFED401).withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.account_balance_wallet, size: 18),
+                        child: const Icon(Icons.payment, size: 18),
                       ),
                     ),
             ),

@@ -99,9 +99,26 @@ abstract class _AssistantStore with Store {
     } catch (err) {
       isLoadingAssistantResponse = false;
       
-      // Check if this is an authentication error
+      // Check if this is a connection error (timeout, connection lost, etc.)
+      bool isConnectionError = false;
       bool isAuthError = false;
+      
       if (err is DioException) {
+        // Check for connection-related errors
+        if (err.type == DioExceptionType.connectionTimeout ||
+            err.type == DioExceptionType.sendTimeout ||
+            err.type == DioExceptionType.receiveTimeout ||
+            err.type == DioExceptionType.connectionError ||
+            err.type == DioExceptionType.badResponse) {
+          // Check if it's a timeout or connection error
+          if (err.type == DioExceptionType.connectionTimeout ||
+              err.type == DioExceptionType.sendTimeout ||
+              err.type == DioExceptionType.receiveTimeout ||
+              err.type == DioExceptionType.connectionError) {
+            isConnectionError = true;
+          }
+        }
+        
         // Check for 401 Unauthorized or authentication-related errors
         if (err.response?.statusCode == 401) {
           isAuthError = true;
@@ -111,6 +128,16 @@ abstract class _AssistantStore with Store {
         }
       } else if (err is Exception) {
         final errorMessage = err.toString().toLowerCase();
+        // Check for connection-related keywords
+        if (errorMessage.contains('timeout') ||
+            errorMessage.contains('connection') ||
+            errorMessage.contains('network') ||
+            errorMessage.contains('socket') ||
+            errorMessage.contains('failed host lookup') ||
+            errorMessage.contains('no internet')) {
+          isConnectionError = true;
+        }
+        // Check for authentication errors
         if (errorMessage.contains('authentication') ||
             errorMessage.contains('unauthorized') ||
             errorMessage.contains('token') ||
@@ -122,6 +149,13 @@ abstract class _AssistantStore with Store {
       // Close modal immediately if authentication failed
       if (isAuthError && _assistantService != null) {
         _assistantService!.hideModal();
+      }
+      
+      // Return connection error message if connection was lost
+      if (isConnectionError) {
+        return AssistantResponse(
+          textResponse: "I was not able to assist you. Please try again.",
+        );
       }
       
       return AssistantResponse(

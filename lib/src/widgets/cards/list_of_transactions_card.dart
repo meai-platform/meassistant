@@ -44,7 +44,11 @@ class ListOfTransactionsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Transaction items
-            ...transactions.map<Widget>((transaction) {
+            ...transactions.asMap().entries.map<Widget>((entry) {
+              final index = entry.key;
+              final transaction = entry.value;
+              final isLast = index == transactions.length - 1;
+              
               String? merchantImageUrl = transaction['merchantImageUrl'] as String?;
               String? categoryName = transaction['categoryName'] as String?;
               double? amount = (transaction['amount'] as num?)?.toDouble() ?? 0.0;
@@ -55,7 +59,7 @@ class ListOfTransactionsCard extends StatelessWidget {
               String? entryType = transaction['entryType'] as String?;
 
               return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
                 child: Row(
                   children: [
                     Container(

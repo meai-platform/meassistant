@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:meai_assistant/meai_assistant.dart';
 
@@ -42,11 +44,11 @@ class MyApp extends StatelessWidget {
     final assistant = MeaiAssistant(
       config: AssistantConfig(
         assistantName: 'meAssistant',
-        baseUrl: 'https://76ba0ef4eed4.ngrok-free.app/',
-        customerId: 'customer123', // Required: Customer ID for API requests
+        baseUrl: 'https://demobank-api.meplatform.ai/',
+        customerId: Platform.isAndroid ? 'customer1234' : 'customer123', // Required: Customer ID for API requests
         lang: 'en', // Language preference: 'en' or 'ar'
         // SDK Authentication credentials (required for mebank SDK)
-        clientId: 'client-test-1234',
+        clientId:  Platform.isAndroid ? 'client-test-1234' : 'client-test-123',
         // HMAC is calculated by your backend
         // Backend should calculate: HMAC-SHA256(clientSecret, timestamp + clientId + packageName + customerId)
         getHmac: (timestamp, clientId, packageName, customerId) async {
@@ -72,6 +74,7 @@ class MyApp extends StatelessWidget {
         
         introText: "Hello! I'm your smart\nmoney assistant.",
         textFieldHint: "Ask something...",
+        fontFamily: "ReadexPro",
         debug: true,
         // colorScheme: AssistantColorScheme.green
         // floatingButtonColor: Colors.red,

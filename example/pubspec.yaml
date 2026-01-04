@@ -2,7 +2,7 @@ name: meai_assistant_example
 description: Example app for MeAI Assistant plugin
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -21,3 +21,19 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  fonts:
+    - family: ReadexPro
+      fonts:
+        - asset: assets/fonts/readexpro/ReadexPro-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/readexpro/ReadexPro-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/readexpro/ReadexPro-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/readexpro/ReadexPro-Light.ttf
+          weight: 300
+        - asset: assets/fonts/readexpro/ReadexPro-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/readexpro/ReadexPro-ExtraLight.ttf
+          weight: 200

@@ -42,6 +42,8 @@ class _AssistantModalState extends State<AssistantModal>
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  // Use ValueNotifier for keyboard visibility to avoid full rebuilds
+  final ValueNotifier<bool> _keyboardVisibleNotifier = ValueNotifier<bool>(false);
   bool _isKeyboardVisible = false;
   bool _isInConversation = false;
   bool _isFirstTime = true;
@@ -52,6 +54,7 @@ class _AssistantModalState extends State<AssistantModal>
   DateTime? _typingStartTime;
   bool _isTimerRunning = false;
   ReactionDisposer? _loadingStateReaction;
+  Timer? _keyboardDebounceTimer;
 
   @override
   void initState() {
@@ -87,12 +90,19 @@ class _AssistantModalState extends State<AssistantModal>
     var keyboardVisibilityController = KeyboardVisibilityController();
     keyboardSubscription =
         keyboardVisibilityController.onChange.listen((bool visible) {
-      setState(() {
-        _isKeyboardVisible = visible;
-        if (_isKeyboardVisible) {
-          Future.delayed(const Duration(milliseconds: 300)).then((v) {
-            _scrollToBottomAnimate();
-          });
+      // Debounce keyboard visibility changes to reduce rebuilds
+      _keyboardDebounceTimer?.cancel();
+      _keyboardDebounceTimer = Timer(const Duration(milliseconds: 50), () {
+        if (mounted) {
+          _isKeyboardVisible = visible;
+          _keyboardVisibleNotifier.value = visible;
+          if (_isKeyboardVisible) {
+            Future.delayed(const Duration(milliseconds: 300)).then((v) {
+              if (mounted) {
+                _scrollToBottomAnimate();
+              }
+            });
+          }
         }
       });
     });
@@ -138,6 +148,8 @@ class _AssistantModalState extends State<AssistantModal>
     _scrollController.dispose();
     keyboardSubscription.cancel();
     _loadingMessageTimer?.cancel();
+    _keyboardDebounceTimer?.cancel();
+    _keyboardVisibleNotifier.dispose();
     _loadingStateReaction?.call();
     super.dispose();
   }
@@ -171,8 +183,9 @@ class _AssistantModalState extends State<AssistantModal>
 
     _conversationAnimationController.forward();
 
+    // Wait for layout to complete before scrolling
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
+        _scrollToBottom();
     });
 
     AssistantResponse? response =
@@ -190,19 +203,26 @@ class _AssistantModalState extends State<AssistantModal>
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
-      _scrollController.jumpTo(
+       _scrollController.jumpTo(
         _scrollController.position.maxScrollExtent,
       );
+      // final maxScroll = _scrollController.position.maxScrollExtent;
+      // if (maxScroll.isFinite && maxScroll >= 0) {
+      //   _scrollController.jumpTo(maxScroll);
+      // }
     }
   }
 
   void _scrollToBottomAnimate() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+    if (_scrollController.hasClients && !_scrollController.position.isScrollingNotifier.value) {
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      if (maxScroll.isFinite && maxScroll >= 0) {
+        _scrollController.animateTo(
+          maxScroll,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+        );
+      }
     }
   }
 
@@ -277,33 +297,41 @@ class _AssistantModalState extends State<AssistantModal>
   }
 
   Widget _buildBottomSheetContent() {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final modalHeight = _isKeyboardVisible ? screenHeight * 0.5 : screenHeight * 0.9;
-    
-    return GestureDetector(
-      onTap: () {
-        // Unfocus the text field if it has focus
-        if (_textFieldFocusNode.hasFocus) {
-          _textFieldFocusNode.unfocus();
-        }
-      },
-      child: RepaintBoundary(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          width: double.infinity,
-          constraints: BoxConstraints(
-            maxHeight: modalHeight,
-            minHeight: modalHeight,
-          ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-            child: RepaintBoundary(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
+    // Use ValueListenableBuilder for keyboard visibility to avoid full rebuilds
+    return ValueListenableBuilder<bool>(
+      valueListenable: _keyboardVisibleNotifier,
+      builder: (context, isKeyboardVisible, child) {
+        // Cache MediaQuery to avoid repeated lookups
+        final mediaQuery = MediaQuery.of(context);
+        final screenHeight = mediaQuery.size.height;
+        final modalHeight = isKeyboardVisible ? screenHeight * 0.5 : screenHeight * 0.9;
+            
+        return GestureDetector(
+          onTap: () {
+            // Unfocus the text field if it has focus
+            if (_textFieldFocusNode.hasFocus) {
+              _textFieldFocusNode.unfocus();
+            }
+          },
+          child: RepaintBoundary(
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+              child: Container(
+                width: double.infinity,
+                constraints: BoxConstraints(
+                  maxHeight: modalHeight,
+                  minHeight: modalHeight,
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: RepaintBoundary(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
               decoration: BoxDecoration(
                 color: widget.config.effectiveColorScheme.modalBackgroundColor,
                 borderRadius: const BorderRadius.only(
@@ -378,8 +406,13 @@ class _AssistantModalState extends State<AssistantModal>
                     ),
                   ),
                   _buildInputArea(),
-                  SizedBox(
-                    height: _isKeyboardVisible ? 0 : 20,
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _keyboardVisibleNotifier,
+                    builder: (context, isKeyboardVisible, child) {
+                      return SizedBox(
+                        height: isKeyboardVisible ? 0 : 20,
+                      );
+                    },
                   ),
                 ],
               ),
@@ -387,20 +420,24 @@ class _AssistantModalState extends State<AssistantModal>
           ),
         ),
       ),
-      ),
-    ));
+        ))));
+      },
+    );
   }
 
   Widget _buildWelcomeScreen() {
     return AnimatedOpacity(
       opacity: _isInConversation ? 0.0 : 1.0,
       duration: const Duration(milliseconds: 300),
-      child: Column(
-        children: [
-          Expanded(
-            flex: _isKeyboardVisible ? 6 : 1,
-            child: const SizedBox.shrink(),
-          ),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _keyboardVisibleNotifier,
+        builder: (context, isKeyboardVisible, child) {
+          return Column(
+            children: [
+              Expanded(
+                flex: isKeyboardVisible ? 6 : 1,
+                child: const SizedBox.shrink(),
+              ),
           _buildImage(
             widget.config.logoPath ?? 'packages/meai_assistant/assets/images/ai_button.png',
             width: 90,
@@ -433,8 +470,11 @@ class _AssistantModalState extends State<AssistantModal>
               final prompts = widget.assistantStore.suggestedPrompts;
               final lang = widget.config.lang;
               
-              // Show skeleton loading when creating conversation
-              if (widget.assistantStore.isCreatingConversation && !_isKeyboardVisible) {
+              return ValueListenableBuilder<bool>(
+                valueListenable: _keyboardVisibleNotifier,
+                builder: (context, isKeyboardVisible, child) {
+                  // Show skeleton loading when creating conversation
+                  if (widget.assistantStore.isCreatingConversation && !isKeyboardVisible) {
                 return Container(
                   height: 90,
                   child: ListView(
@@ -450,44 +490,48 @@ class _AssistantModalState extends State<AssistantModal>
                 );
               }
               
-              if (prompts != null && prompts.isNotEmpty && !_isKeyboardVisible) {
-                return Container(
-                  height: 90,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    children: prompts.map((prompt) {
-                      return Padding(
-                              padding: const EdgeInsets.only(right: 10),
-                              child: _buildSuggestionCard(prompt.getPrompt(lang)),
-                      );
-                    }).toList(),
-                  ),
-                );
-              }
-              
-              // Fall back to config suggested prompts if API didn't return any
-              if (!_isKeyboardVisible && widget.config.suggestionPrompts != null) {
-                return Container(
-                  height: 90,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    children: widget.config.suggestionPrompts!.map((prompt) {
-                      return Padding(
-                              padding: const EdgeInsets.only(right: 10),
-                              child: _buildSuggestionCard(prompt),
-                      );
-                    }).toList(),
-                  ),
-                );
-              }
-              
-              return const SizedBox.shrink();
+                  if (prompts != null && prompts.isNotEmpty && !isKeyboardVisible) {
+                    return Container(
+                      height: 90,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        children: prompts.map((prompt) {
+                          return Padding(
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: _buildSuggestionCard(prompt.getPrompt(lang)),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  }
+                  
+                  // Fall back to config suggested prompts if API didn't return any
+                  if (!isKeyboardVisible && widget.config.suggestionPrompts != null) {
+                    return Container(
+                      height: 90,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        children: widget.config.suggestionPrompts!.map((prompt) {
+                          return Padding(
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: _buildSuggestionCard(prompt),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  }
+                  
+                  return const SizedBox.shrink();
+                },
+              );
             },
           ),
           const SizedBox(height: 24),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -510,6 +554,8 @@ class _AssistantModalState extends State<AssistantModal>
                       itemCount: widget.assistantStore.messages.length +
                           (widget.assistantStore.isLoadingAssistantResponse ? 1 : 0),
                       cacheExtent: 500,
+                      addAutomaticKeepAlives: false,
+                      addRepaintBoundaries: true,
                       itemBuilder: (context, index) {
                         if (index == widget.assistantStore.messages.length &&
                             widget.assistantStore.isLoadingAssistantResponse) {
@@ -640,8 +686,10 @@ class _AssistantModalState extends State<AssistantModal>
               !message.isUser &&
               message.assistantResponse != null &&
               message.assistantResponse!.suggestedResponses != null)
-            SizedBox(
-              width: MediaQuery.of(context).size.width,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return SizedBox(
+                  width: constraints.maxWidth,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -653,6 +701,8 @@ class _AssistantModalState extends State<AssistantModal>
                   const SizedBox(height: 15),
                 ],
               ),
+                );
+              },
             )
         ],
       ),
@@ -804,32 +854,42 @@ class _AssistantModalState extends State<AssistantModal>
               ),
             ),
           ),
-          if (!_isKeyboardVisible)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(
-                'You\'re chatting with an AI Financial Assistant - Powered by meAi',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 9,
-                  color: widget.config.effectiveColorScheme.footerTextColor,
-                  fontFamily: widget.config.fontFamily ?? 'ReadexPro',
-                ),
-              ),
-            ),
+          ValueListenableBuilder<bool>(
+            valueListenable: _keyboardVisibleNotifier,
+            builder: (context, isKeyboardVisible, child) {
+              if (!isKeyboardVisible) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(
+                    'You\'re chatting with an AI Financial Assistant - Powered by meAi',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: widget.config.effectiveColorScheme.footerTextColor,
+                      fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ],
       ),
     );
   }
 
   Widget _buildSuggestionCard(String text) {
+    // Use MediaQuery for width since this is used in a horizontal ListView
+    // LayoutBuilder would give unbounded constraints in horizontal scroll
+    final screenWidth = MediaQuery.of(context).size.width;
     return GestureDetector(
       onTap: () {
         _textController.text = text;
         _sendMessage();
       },
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.6,
+        width: screenWidth * 0.65,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: widget.config.effectiveColorScheme.suggestionCardBackgroundColor,
@@ -851,7 +911,7 @@ class _AssistantModalState extends State<AssistantModal>
                 errorBuilder: (context, error, stackTrace) {
                   return Icon(
                     Icons.chat_bubble_outline,
-                size: 18,
+                    size: 18,
                     color: widget.config.effectiveColorScheme.suggestionIconColor,
                   );
                 },
@@ -862,6 +922,7 @@ class _AssistantModalState extends State<AssistantModal>
               child: Text(
                 text,
                 maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
                   color: widget.config.effectiveColorScheme.textColor,
@@ -876,11 +937,14 @@ class _AssistantModalState extends State<AssistantModal>
   }
 
   Widget _buildSuggestionCardSkeleton() {
+    // Use MediaQuery for width since this is used in a horizontal ListView
+    // LayoutBuilder would give unbounded constraints in horizontal scroll
+    final screenWidth = MediaQuery.of(context).size.width;
     return Shimmer.fromColors(
       baseColor: widget.config.effectiveColorScheme.shimmerBaseColor,
       highlightColor: widget.config.effectiveColorScheme.shimmerHighlightColor,
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.6,
+        width: screenWidth * 0.6,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: widget.config.effectiveColorScheme.suggestionCardBackgroundColor,
@@ -916,7 +980,7 @@ class _AssistantModalState extends State<AssistantModal>
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    width: MediaQuery.of(context).size.width * 0.4,
+                    width: screenWidth * 0.4,
                     height: 12,
                     decoration: BoxDecoration(
                       color: widget.config.effectiveColorScheme.skeletonColor,
@@ -954,7 +1018,7 @@ class _AssistantModalState extends State<AssistantModal>
             text,
             maxLines: 3,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: widget.config.effectiveColorScheme.primaryColor,
               fontFamily: widget.config.fontFamily ?? 'ReadexPro',
             ),

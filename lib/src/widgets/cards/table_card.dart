@@ -46,24 +46,18 @@ class TableCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Scrollbar(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           controller: _scrollController,
-          thumbVisibility: false,
-          trackVisibility: false,
-          interactive: false,
-          thickness: 0,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            controller: _scrollController,
-            child: DataTable(
+          child: DataTable(
               columns: headers
                   .map((h) => DataColumn(
                         label: Text(
                           h,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             color: const Color(0xff0f0f0f), // dark1000
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w300,
                             fontFamily: fontFamily,
                           ),
                         ),
@@ -91,7 +85,6 @@ class TableCard extends StatelessWidget {
               dataRowMinHeight: 10,
               columnSpacing: 30,
             ),
-          ),
         ),
       ),
     );
