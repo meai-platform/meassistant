@@ -861,7 +861,7 @@ class _AssistantModalState extends State<AssistantModal>
                 return Padding(
                   padding: const EdgeInsets.only(top: 16),
                   child: Text(
-                    'You\'re chatting with an AI Financial Assistant - Powered by meAi',
+                    'You\'re chatting with an AI Financial Assistant - Powered by me.Ai',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 9,

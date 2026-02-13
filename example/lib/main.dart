@@ -72,8 +72,8 @@ class MyApp extends StatelessWidget {
         // Default branding uses meAi logo, colors, and ReadexPro font
         // logoPath and floatingLogoPath default to meAi logo
         
-        introText: "Hello! I'm your smart\nmoney assistant.",
-        textFieldHint: "Ask something...",
+        introText: "How may I assist\nyou today?",
+        textFieldHint: "Type your question...",
         fontFamily: "ReadexPro",
         debug: true,
         // colorScheme: AssistantColorScheme.green
@@ -83,7 +83,7 @@ class MyApp extends StatelessWidget {
     );
 
     return MaterialApp(
-      title: 'MeAI Assistant Example',
+      title: 'Me.Ai Assistant Example',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
