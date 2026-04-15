@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/meai_localizations.dart';
 import 'amount_currency_widget.dart';
 import 'rounded_container_widget.dart';
 
@@ -11,6 +12,7 @@ class SavingGoalCard extends StatelessWidget {
   final double targetAmount;
   final String targetDate;
   final String? fontFamily;
+  final String lang;
 
   const SavingGoalCard({
     super.key,
@@ -21,11 +23,14 @@ class SavingGoalCard extends StatelessWidget {
     required this.targetAmount,
     required this.targetDate,
     this.fontFamily,
+    this.lang = 'en',
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Directionality(
+      textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
       decoration: BoxDecoration(
         gradient: SweepGradient(
           startAngle: 0,
@@ -131,7 +136,7 @@ class SavingGoalCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            'SAVED',
+                            MeAiLocalizations.saved(lang),
                             style: TextStyle(
                               fontSize: 7,
                               fontWeight: FontWeight.w400,
@@ -153,7 +158,7 @@ class SavingGoalCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            'GOAL',
+                            MeAiLocalizations.goal(lang),
                             style: TextStyle(
                               fontSize: 7,
                               fontWeight: FontWeight.w400,
@@ -174,7 +179,7 @@ class SavingGoalCard extends StatelessWidget {
                       content: Row(
                         children: [
                           Text(
-                            "Remaining",
+                            MeAiLocalizations.remaining(lang),
                             style: TextStyle(
                               color: const Color(0xff686878), // dark600
                               fontWeight: FontWeight.w300,
@@ -200,6 +205,7 @@ class SavingGoalCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

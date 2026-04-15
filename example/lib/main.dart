@@ -7,80 +7,43 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
-  //
-  //
-  // AssistantConfig(
-  // // Required
-  // assistantName: 'My Assistant',  // Name displayed in UI
-  // baseUrl: 'https://api.example.com/',  // API base URL
-  //
-  // // Optional - Appearance
-  // logoPath: 'assets/images/assistant_logo.png',  // Main logo (asset or URL)
-  // floatingLogoPath: 'assets/images/floating_logo.png',  // Floating button logo
-  // colorScheme: AssistantColorScheme.purple,  // Color scheme
-  //
-  // // Optional - Text
-  // introText: "Hello! I'm your smart money assistant.",  // Welcome message
-  // textFieldHint: "Ask something...",  // Input field hint
-  //
-  // // Optional - Authentication
-  // getAuthToken: () async => await getToken(),  // Function to get auth token
-  // getUserId: () async => await getUserId(),  // Function to get user ID
-  //
-  // // Optional - Additional
-  // additionalHeaders: {'Custom-Header': 'value'},  // Extra HTTP headers
-  // floatingButtonBottomSpacing: 100.0,  // Bottom spacing for button
-  // floatingButtonRightSpacing: 20.0,  // Right spacing for button
-  // suggestionPrompts: [  // Welcome screen suggestions
-  // 'What is my spending average?',
-  // 'How much can I save?',
-  // ],
-  // )
+
   @override
-  Widget build(BuildContext context) {
-    // Create assistant configuration
-    final assistant = MeaiAssistant(
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  String _lang = 'en';
+
+  MeaiAssistant _buildAssistant(String lang) {
+    return MeaiAssistant(
       config: AssistantConfig(
         assistantName: 'meAssistant',
         baseUrl: 'https://demobank-api.meplatform.ai/',
-        customerId: Platform.isAndroid ? 'customer1234' : 'customer123', // Required: Customer ID for API requests
-        lang: 'en', // Language preference: 'en' or 'ar'
-        // SDK Authentication credentials (required for mebank SDK)
-        clientId:  Platform.isAndroid ? 'client-test-1234' : 'client-test-123',
-        // HMAC is calculated by your backend
-        // Backend should calculate: HMAC-SHA256(clientSecret, timestamp + clientId + packageName + customerId)
+        customerId: Platform.isAndroid ? 'customer1234' : 'customer123',
+        lang: lang,
+        clientId: Platform.isAndroid ? 'client-test-1234' : 'client-test-123',
         getHmac: (timestamp, clientId, packageName, customerId) async {
-          // Call your backend to calculate HMAC
-          // Example:
-          // final response = await http.post(
-          //   Uri.parse('https://your-backend.com/calculate-hmac'),
-          //   body: {
-          //     'timestamp': timestamp.toString(),
-          //     'clientId': clientId,
-          //     'packageName': packageName,
-          //     'customerId': customerId ?? '',
-          //   },
-          // );
-          // return response.body;
-          
-          // For testing, return a placeholder (replace with actual backend call)
           return 'calculated-hmac-from-backend';
         },
-        // Package name and app hash are automatically read/calculated from the app
-        // Default branding uses meAi logo, colors, and ReadexPro font
-        // logoPath and floatingLogoPath default to meAi logo
-        
-        introText: "How may I assist\nyou today?",
-        textFieldHint: "Type your question...",
-        fontFamily: "ReadexPro",
+        fontFamily: 'ReadexPro',
         debug: true,
-        // colorScheme: AssistantColorScheme.green
-        // floatingButtonColor: Colors.red,
-        // floatingLogoPath: "assets/images/me-logo.png",
       ),
     );
+  }
+
+  void _setLang(String lang) {
+    if (lang == _lang) return;
+    setState(() {
+      _lang = lang;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final assistant = _buildAssistant(_lang);
 
     return MaterialApp(
       title: 'Me.Ai Assistant Example',
@@ -88,7 +51,11 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: assistant.wrapApp(
-        MyHomePage(assistant: assistant),
+        MyHomePage(
+          assistant: assistant,
+          selectedLang: _lang,
+          onLangChanged: _setLang,
+        ),
       ),
     );
   }
@@ -96,8 +63,15 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   final MeaiAssistant assistant;
+  final String selectedLang;
+  final ValueChanged<String> onLangChanged;
 
-  const MyHomePage({Key? key, required this.assistant}) : super(key: key);
+  const MyHomePage({
+    Key? key,
+    required this.assistant,
+    required this.selectedLang,
+    required this.onLangChanged,
+  }) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -107,7 +81,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    // Show the assistant after a short delay
     Future.delayed(const Duration(seconds: 1), () {
       widget.assistant.showAssistant();
     });
@@ -115,38 +88,47 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isAr = widget.selectedLang == 'ar';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MeAI Assistant Example'),
+        title: Text(isAr ? 'مثال مساعد MeAI' : 'MeAI Assistant Example'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: _LangToggle(
+              selected: widget.selectedLang,
+              onChanged: widget.onLangChanged,
+            ),
+          ),
+        ],
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'Welcome to MeAI Assistant',
-              style: TextStyle(fontSize: 24),
+            Text(
+              isAr ? 'مرحباً بك في مساعد MeAI' : 'Welcome to MeAI Assistant',
+              style: const TextStyle(fontSize: 24),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                widget.assistant.showModal();
-              },
-              child: const Text('Open Assistant'),
+            const SizedBox(height: 32),
+            _ActionButton(
+              label: isAr ? 'فتح المساعد' : 'Open Assistant',
+              icon: Icons.chat_bubble_outline,
+              onTap: () => widget.assistant.showModal(),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () {
-                widget.assistant.hideAssistant();
-              },
-              child: const Text('Hide Floating Button'),
+            const SizedBox(height: 12),
+            _ActionButton(
+              label: isAr ? 'إخفاء الزر العائم' : 'Hide Floating Button',
+              icon: Icons.visibility_off_outlined,
+              onTap: () => widget.assistant.hideAssistant(),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () {
-                widget.assistant.showAssistant();
-              },
-              child: const Text('Show Floating Button'),
+            const SizedBox(height: 12),
+            _ActionButton(
+              label: isAr ? 'إظهار الزر العائم' : 'Show Floating Button',
+              icon: Icons.visibility_outlined,
+              onTap: () => widget.assistant.showAssistant(),
             ),
           ],
         ),
@@ -155,3 +137,97 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
+/// Segmented EN / AR toggle button.
+class _LangToggle extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onChanged;
+
+  const _LangToggle({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _LangOption(
+              label: 'EN', value: 'en', selected: selected, onTap: onChanged),
+          Container(width: 1, height: 24, color: Colors.blue.shade200),
+          _LangOption(
+              label: 'AR', value: 'ar', selected: selected, onTap: onChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _LangOption extends StatelessWidget {
+  final String label;
+  final String value;
+  final String selected;
+  final ValueChanged<String> onTap;
+
+  const _LangOption({
+    required this.label,
+    required this.value,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = value == selected;
+    return GestureDetector(
+      onTap: () => onTap(value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.blue : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isActive ? Colors.white : Colors.blue.shade700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Consistent button used in the home page body.
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 260,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+      ),
+    );
+  }
+}

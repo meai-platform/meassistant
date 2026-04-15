@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/meai_localizations.dart';
 import 'amount_currency_widget.dart';
 import 'rounded_container_widget.dart';
 
@@ -13,6 +14,7 @@ class SpendingLimitAlertCard extends StatelessWidget {
   final String? categoryName;
   final String descriptionOfCurrentStatus;
   final String? fontFamily;
+  final String lang;
 
   SpendingLimitAlertCard({
     super.key,
@@ -25,6 +27,7 @@ class SpendingLimitAlertCard extends StatelessWidget {
     this.categoryName,
     required this.descriptionOfCurrentStatus,
     this.fontFamily,
+    this.lang = 'en',
   });
 
   @override
@@ -33,7 +36,9 @@ class SpendingLimitAlertCard extends StatelessWidget {
     final progress = limitAmountOnCategory > 0 ? currentSpendOnCategory / limitAmountOnCategory : 0.0;
     final isOverLimit = progress > 1.0;
 
-    return Container(
+    return Directionality(
+      textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
       decoration: BoxDecoration(
         gradient: SweepGradient(
           startAngle: 0,
@@ -72,7 +77,7 @@ class SpendingLimitAlertCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        categoryName ?? 'Category limit',
+                        categoryName ?? MeAiLocalizations.categoryLimit(lang),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
@@ -116,7 +121,7 @@ class SpendingLimitAlertCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            'SPENT',
+                            MeAiLocalizations.spent(lang),
                             style: TextStyle(
                               fontSize: 7,
                               fontWeight: FontWeight.w400,
@@ -138,7 +143,7 @@ class SpendingLimitAlertCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            'LIMIT',
+                            MeAiLocalizations.limit(lang),
                             style: TextStyle(
                               fontSize: 7,
                               fontWeight: FontWeight.w400,
@@ -157,7 +162,7 @@ class SpendingLimitAlertCard extends StatelessWidget {
                     content: Row(
                       children: [
                         Text(
-                          isOverLimit ? "Overspent" : "Remaining",
+                          isOverLimit ? MeAiLocalizations.overspent(lang) : MeAiLocalizations.remaining(lang),
                           style: TextStyle(
                             color: const Color(0xff686878), // dark600
                             fontWeight: FontWeight.w300,
@@ -182,6 +187,7 @@ class SpendingLimitAlertCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

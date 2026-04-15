@@ -11,6 +11,8 @@ import '../config/assistant_config.dart';
 import '../models/assistant_response.dart';
 import '../services/assistant_service.dart';
 import '../stores/assistant_store.dart';
+import '../utils/text_direction_utils.dart';
+import '../utils/meai_localizations.dart';
 import 'typing_text.dart';
 
 /// Modal widget that displays the assistant chat interface
@@ -49,7 +51,7 @@ class _AssistantModalState extends State<AssistantModal>
   bool _isFirstTime = true;
   bool _isDontAnimateLastMsg = false;
   bool _isAnimatingText = false;
-  String _loadingMessage = 'Analyzing your message';
+  late String _loadingMessage;
   Timer? _loadingMessageTimer;
   DateTime? _typingStartTime;
   bool _isTimerRunning = false;
@@ -59,6 +61,7 @@ class _AssistantModalState extends State<AssistantModal>
   @override
   void initState() {
     super.initState();
+    _loadingMessage = MeAiLocalizations.analyzingMessage(widget.config.lang);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 350),
       vsync: this,
@@ -175,7 +178,7 @@ class _AssistantModalState extends State<AssistantModal>
       ));
       _isInConversation = true;
       // Reset loading message and cancel any existing timer for new prompt
-      _loadingMessage = 'Analyzing your message';
+      _loadingMessage = MeAiLocalizations.analyzingMessage(widget.config.lang);
       _loadingMessageTimer?.cancel();
       _loadingMessageTimer = null;
       _isTimerRunning = false;
@@ -237,7 +240,10 @@ class _AssistantModalState extends State<AssistantModal>
       }
     }
     
-    return Overlay(
+    final isArabic = widget.config.isArabic;
+    return Directionality(
+      textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
+      child: Overlay(
       initialEntries: [
         OverlayEntry(
           builder: (context) => AnimatedBuilder(
@@ -293,6 +299,7 @@ class _AssistantModalState extends State<AssistantModal>
               ),
         )
       ],
+      ),
     );
   }
 
@@ -454,7 +461,7 @@ class _AssistantModalState extends State<AssistantModal>
           ),
           const SizedBox(height: 30),
           Text(
-            widget.config.introText,
+            widget.config.effectiveIntroText,
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w600,
@@ -639,6 +646,7 @@ class _AssistantModalState extends State<AssistantModal>
                   child: message.isUser
                       ? Text(
                           message.text,
+                          textDirection: textDirectionForContent(message.text),
                           style: TextStyle(
                             fontSize: 15,
                             color: widget.config.effectiveColorScheme.userMessageTextColor,
@@ -654,6 +662,8 @@ class _AssistantModalState extends State<AssistantModal>
                           assistantResponse: message.assistantResponse,
                           customObjectWidgetBuilder: widget.config.customObjectWidgetBuilder,
                           fontFamily: widget.config.fontFamily,
+                          lang: widget.config.lang,
+                          textDirection: textDirectionForContent(message.text),
                           style: TextStyle(
                             fontSize: 15,
                             color: widget.config.effectiveColorScheme.assistantMessageTextColor,
@@ -712,7 +722,7 @@ class _AssistantModalState extends State<AssistantModal>
   void _startLoadingMessageTimer() {
     _loadingMessageTimer?.cancel();
     _typingStartTime = DateTime.now();
-    _loadingMessage = 'Analyzing your message';
+    _loadingMessage = MeAiLocalizations.analyzingMessage(widget.config.lang);
     _isTimerRunning = true;
     
     // Use 1 second interval since we only check seconds
@@ -726,16 +736,17 @@ class _AssistantModalState extends State<AssistantModal>
       
       final elapsed = DateTime.now().difference(_typingStartTime!);
       final seconds = elapsed.inSeconds;
-      
+      final lang = widget.config.lang;
+
       String newMessage;
       if (seconds < 5) {
-        newMessage = 'Analyzing your message';
+        newMessage = MeAiLocalizations.analyzingMessage(lang);
       } else if (seconds < 7) {
-        newMessage = 'Fetching personalized relevant data';
+        newMessage = MeAiLocalizations.fetchingData(lang);
       } else if (seconds < 10) {
-        newMessage = 'Analyzing data';
+        newMessage = MeAiLocalizations.analyzingData(lang);
       } else {
-        newMessage = 'Preparing final response';
+        newMessage = MeAiLocalizations.preparingResponse(lang);
       }
       
       if (newMessage != _loadingMessage && mounted) {
@@ -811,7 +822,7 @@ class _AssistantModalState extends State<AssistantModal>
                 fontFamily: widget.config.fontFamily ?? 'ReadexPro',
               ),
               decoration: InputDecoration(
-                hintText: widget.config.textFieldHint,
+                hintText: widget.config.effectiveTextFieldHint,
                 hintStyle: TextStyle(
                   color: widget.config.effectiveColorScheme.hintTextColor,
                   fontSize: 13,
@@ -861,7 +872,7 @@ class _AssistantModalState extends State<AssistantModal>
                 return Padding(
                   padding: const EdgeInsets.only(top: 16),
                   child: Text(
-                    'You\'re chatting with an AI Financial Assistant - Powered by me.Ai',
+                    MeAiLocalizations.footerText(widget.config.lang),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 9,
@@ -923,6 +934,7 @@ class _AssistantModalState extends State<AssistantModal>
                 text,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
+                textDirection: textDirectionForContent(text),
                 style: TextStyle(
                   fontSize: 13,
                   color: widget.config.effectiveColorScheme.textColor,
@@ -1017,6 +1029,7 @@ class _AssistantModalState extends State<AssistantModal>
           child: Text(
             text,
             maxLines: 3,
+            textDirection: textDirectionForContent(text),
             style: TextStyle(
               fontSize: 13,
               color: widget.config.effectiveColorScheme.primaryColor,

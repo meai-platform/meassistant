@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
+import '../../utils/meai_localizations.dart';
 import 'amount_currency_widget.dart';
 import 'rounded_container_widget.dart';
 import 'recurring_icon.dart';
@@ -16,6 +17,7 @@ class RecurringTransactionCard extends StatelessWidget {
   final String firstPaymentDate;
   final String expectedNextPaymentDate;
   final String? fontFamily;
+  final String lang;
 
   const RecurringTransactionCard({
     super.key,
@@ -29,11 +31,14 @@ class RecurringTransactionCard extends StatelessWidget {
     required this.firstPaymentDate,
     required this.expectedNextPaymentDate,
     this.fontFamily,
+    this.lang = 'en',
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Directionality(
+      textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
       decoration: BoxDecoration(
         gradient: SweepGradient(
           startAngle: 0,
@@ -103,7 +108,7 @@ class RecurringTransactionCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        merchantName ?? 'Recurring Trn',
+                        merchantName ?? MeAiLocalizations.recurringTrn(lang),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -143,19 +148,20 @@ class RecurringTransactionCard extends StatelessWidget {
               color: const Color(0xfff6f4fe), // mePurple25
               content: Column(
                 children: [
-                  _buildAmountDetailRow('Overall you spent', '${overallSpentAmount.toStringAsFixed(3)}'),
+                  _buildAmountDetailRow(MeAiLocalizations.overallYouSpent(lang), '${overallSpentAmount.toStringAsFixed(3)}'),
                   const SizedBox(height: 16),
-                  _buildDetailRow('Transactions', '$numberOfTransactions times'),
+                  _buildDetailRow(MeAiLocalizations.transactions(lang), MeAiLocalizations.timesCount(lang, numberOfTransactions)),
                   const SizedBox(height: 16),
-                  _buildDetailRow('First payment', _formatDate(firstPaymentDate)),
+                  _buildDetailRow(MeAiLocalizations.firstPayment(lang), _formatDate(firstPaymentDate)),
                   const SizedBox(height: 16),
-                  _buildDetailRow('Next payment', _formatDate(expectedNextPaymentDate)),
+                  _buildDetailRow(MeAiLocalizations.nextPayment(lang), _formatDate(expectedNextPaymentDate)),
                 ],
               ),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 

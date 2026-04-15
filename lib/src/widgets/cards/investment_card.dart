@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/meai_localizations.dart';
 import 'amount_currency_widget.dart';
 import 'rounded_container_widget.dart';
 import 'separator_line_widget.dart';
@@ -13,6 +14,7 @@ class InvestmentCard extends StatelessWidget {
   final double? expectedProfitAtMaturity;
   final double? amountAtMaturityWithProfit;
   final String? fontFamily;
+  final String lang;
 
   const InvestmentCard({
     super.key,
@@ -24,11 +26,14 @@ class InvestmentCard extends StatelessWidget {
     this.expectedProfitAtMaturity,
     this.amountAtMaturityWithProfit,
     this.fontFamily,
+    this.lang = 'en',
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Directionality(
+      textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
       decoration: BoxDecoration(
         gradient: SweepGradient(
           startAngle: 0,
@@ -100,7 +105,7 @@ class InvestmentCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        "Investment",
+                        MeAiLocalizations.investment(lang),
                         style: TextStyle(
                           color: const Color(0xFF9292A0), // dark400
                           fontSize: 13,
@@ -125,7 +130,7 @@ class InvestmentCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Period',
+                          MeAiLocalizations.period(lang),
                           style: TextStyle(
                             color: const Color(0xFF9292A0), // dark400
                             fontSize: 13,
@@ -153,7 +158,7 @@ class InvestmentCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Expected profit rate',
+                        MeAiLocalizations.expectedProfitRate(lang),
                         style: TextStyle(
                           color: const Color(0xFF9292A0), // dark400
                           fontSize: 13,
@@ -186,7 +191,7 @@ class InvestmentCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Amount',
+                          MeAiLocalizations.amount(lang),
                           style: TextStyle(
                             color: const Color(0xFF9292A0), // dark400
                             fontSize: 13,
@@ -214,7 +219,7 @@ class InvestmentCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Profit at maturity',
+                          MeAiLocalizations.profitAtMaturity(lang),
                           style: TextStyle(
                             color: const Color(0xFF9292A0), // dark400
                             fontSize: 13,
@@ -244,7 +249,7 @@ class InvestmentCard extends StatelessWidget {
                 content: Column(
                   children: [
                     Text(
-                      "Expected amount with profit at maturity",
+                      MeAiLocalizations.expectedAmountWithProfitAtMaturity(lang),
                       style: TextStyle(
                         fontSize: 13,
                         color: const Color(0xFF9292A0), // dark400
@@ -274,6 +279,7 @@ class InvestmentCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }

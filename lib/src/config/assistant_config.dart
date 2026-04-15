@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/meai_localizations.dart';
 
 /// Configuration class for customizing the assistant appearance and behavior
 class AssistantConfig {
@@ -132,6 +133,29 @@ class AssistantConfig {
     this.customObjectWidgetBuilder,
     this.debug = false,
   });
+
+  /// Whether the current language is Arabic (RTL).
+  bool get isArabic => lang == 'ar';
+
+  /// Effective intro text: returns the Arabic default when [lang] is 'ar'
+  /// and the caller has not provided a custom value (i.e. still the English default).
+  String get effectiveIntroText {
+    const enDefault = "Hello! I'm your smart money assistant.";
+    if (introText == enDefault && lang == 'ar') {
+      return MeAiLocalizations.defaultIntroText(lang);
+    }
+    return introText;
+  }
+
+  /// Effective text-field hint: returns the Arabic default when [lang] is 'ar'
+  /// and the caller has not provided a custom value (i.e. still the English default).
+  String get effectiveTextFieldHint {
+    const enDefault = 'Ask something...';
+    if (textFieldHint == enDefault && lang == 'ar') {
+      return MeAiLocalizations.defaultTextFieldHint(lang);
+    }
+    return textFieldHint;
+  }
 
   /// Get the effective color scheme (either provided or built from individual colors)
   AssistantColorScheme get effectiveColorScheme {

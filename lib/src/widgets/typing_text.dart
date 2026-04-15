@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../utils/meai_localizations.dart';
+import '../utils/text_direction_utils.dart';
 import '../models/assistant_response.dart';
 import 'cards/transaction_card.dart';
 import 'cards/recurring_transaction_card.dart';
@@ -37,6 +39,10 @@ class TypingText extends StatefulWidget {
   final AssistantResponse? assistantResponse;
   final Widget? Function(String objectType, dynamic objectData)? customObjectWidgetBuilder;
   final String? fontFamily;
+  final TextDirection? textDirection;
+
+  /// Language code ('en' or 'ar') used to localise card widget labels.
+  final String lang;
 
   const TypingText({
     super.key,
@@ -50,6 +56,8 @@ class TypingText extends StatefulWidget {
     this.assistantResponse,
     this.customObjectWidgetBuilder,
     this.fontFamily,
+    this.textDirection,
+    this.lang = 'en',
   });
 
   @override
@@ -82,7 +90,9 @@ class _TypingTextState extends State<TypingText> {
         if (segment.isWidget) {
           return segment.widget!;
         } else {
-          return Text(segment.text!, style: widget.style);
+          final text = segment.text!;
+          final dir = widget.textDirection ?? textDirectionForContent(text);
+          return Text(text, style: widget.style, textDirection: dir);
         }
       }).toList();
       _completed = true;
@@ -154,8 +164,8 @@ class _TypingTextState extends State<TypingText> {
     if (customObjects is List && customObjectsTypes is List) {
       for (int i = 0; i < customObjects.length && i < customObjectsTypes.length; i++) {
         if (!usedObjectIndices.contains(i)) {
-          Widget widget = _buildWidgetFromTypeAndData(customObjectsTypes[i], customObjects[i]);
-          segments.add(TextSegment.widget(widget));
+          final built = _buildWidgetFromTypeAndData(customObjectsTypes[i], customObjects[i]);
+          if (built != null) segments.add(TextSegment.widget(built));
         }
       }
     }
@@ -168,8 +178,8 @@ class _TypingTextState extends State<TypingText> {
         if (!usedObjectIndices.contains(i)) {
           String key = sortedKeys[i];
           if (customObjects.containsKey(key) && customObjectsTypes.containsKey(key)) {
-            Widget widget = _buildWidgetFromTypeAndData(customObjectsTypes[key], customObjects[key]);
-            segments.add(TextSegment.widget(widget));
+            final built = _buildWidgetFromTypeAndData(customObjectsTypes[key], customObjects[key]);
+            if (built != null) segments.add(TextSegment.widget(built));
           }
         }
       }
@@ -218,157 +228,153 @@ class _TypingTextState extends State<TypingText> {
     return null;
   }
 
-  Widget _buildWidgetFromTypeAndData(dynamic type, dynamic data) {
-    // Use custom widget builder if provided
-    if (widget.customObjectWidgetBuilder != null) {
-      String objectType = type.toString().toUpperCase();
-      Widget? customWidget = widget.customObjectWidgetBuilder!(objectType, data);
-      if (customWidget != null) {
-        return customWidget;
+  /// Builds a card widget from the given [type] and [data].
+  /// Returns null if critical fields are missing or the data cannot be rendered safely,
+  /// so callers can skip the object entirely rather than show a broken widget.
+  Widget? _buildWidgetFromTypeAndData(dynamic type, dynamic data) {
+    try {
+      // Delegate to the host app's custom builder first.
+      if (widget.customObjectWidgetBuilder != null) {
+        final objectType = type.toString().toUpperCase();
+        final customWidget = widget.customObjectWidgetBuilder!(objectType, data);
+        if (customWidget != null) return customWidget;
       }
-    }
 
-    // Use default card widgets based on type
-    String widgetType = type.toString().toUpperCase();
-    
-    switch (widgetType) {
-      case 'TRANSACTION':
-        return TransactionCard(
-          merchantImageUrl: data['merchantImageUrl'] as String?,
-          categoryName: data['categoryName'] as String?,
-          merchantName: data['merchantName'] as String?,
-          transactionDescription: data['transactionDescription'] as String?,
-          categoryImageUrl: data['categoryImageUrl'] as String?,
-          entryType: data['entryType'] as String?,
-          amount: _parseToDouble(data['amount']) ?? 0.0,
-          currency: data['currency'] as String? ?? 'BHD',
-          fontFamily: widget.fontFamily,
-        );
+      // All built-in types require data to be a Map.
+      if (data is! Map) return null;
 
-      case 'RECURRING_TRANSACTION':
-        return RecurringTransactionCard(
-          merchantImageUrl: data['merchantImageUrl'] as String?,
-          merchantName: data['merchantName'] as String?,
-          categoryName: data['categoryName'] as String?,
-          recurringTransactionAmount: _parseToDouble(data['recurringTransactionAmount']) ?? 0.0,
-          currency: data['currency'] as String? ?? 'BHD',
-          overallSpentAmount: _parseToDouble(data['overallSpentAmount']) ?? 0.0,
-          numberOfTransactions: data['numberOfTransactions'] as int? ?? 0,
-          firstPaymentDate: data['firstPaymentDate'] as String? ?? '',
-          expectedNextPaymentDate: data['expectedNextPaymentDate'] as String? ?? '',
-          fontFamily: widget.fontFamily,
-        );
+      final widgetType = type.toString().toUpperCase();
 
-      case 'SAVING_GOAL':
-        return SavingGoalCard(
-          name: data['name'] as String? ?? 'Savings Goal',
-          imageUrl: data['imageUrl'] as String?,
-          amountSaved: _parseToDouble(data['amountSaved']) ?? 0.0,
-          amountRemaining: _parseToDouble(data['amountRemaining']) ?? 0.0,
-          targetAmount: _parseToDouble(data['targetAmount']) ?? 0.0,
-          targetDate: data['targetDate'] as String? ?? '',
-          fontFamily: widget.fontFamily,
-        );
+      switch (widgetType) {
+        case 'TRANSACTION':
+          // amount must be parseable to avoid a meaningless zero-value card.
+          if (_parseToDouble(data['amount']) == null) return null;
+          return TransactionCard(
+            merchantImageUrl: data['merchantImageUrl'] as String?,
+            categoryName: data['categoryName'] as String?,
+            merchantName: data['merchantName'] as String?,
+            transactionDescription: data['transactionDescription'] as String?,
+            categoryImageUrl: data['categoryImageUrl'] as String?,
+            entryType: data['entryType'] as String?,
+            amount: _parseToDouble(data['amount'])!,
+            currency: data['currency'] as String? ?? 'BHD',
+            fontFamily: widget.fontFamily,
+            lang: widget.lang,
+          );
 
-      case 'INVESTMENT':
-        return InvestmentCard(
-          title: data['title'] as String? ?? 'Investment',
-          imageUrl: data['imageUrl'] as String?,
-          period: data['period'] as String?,
-          expectedProfitRate: _parseToDouble(data['expectedProfitRate']) ?? 0.0,
-          amount: _parseToDouble(data['amount']),
-          expectedProfitAtMaturity: _parseToDouble(data['expectedProfitAtMaturity']),
-          amountAtMaturityWithProfit: _parseToDouble(data['amountAtMaturityWithProfit']),
-          fontFamily: widget.fontFamily,
-        );
+        case 'RECURRING_TRANSACTION':
+          // Core financial figures and dates are required.
+          if (_parseToDouble(data['recurringTransactionAmount']) == null) return null;
+          if (_parseToDouble(data['overallSpentAmount']) == null) return null;
+          if (data['firstPaymentDate'] == null || data['expectedNextPaymentDate'] == null) return null;
+          return RecurringTransactionCard(
+            merchantImageUrl: data['merchantImageUrl'] as String?,
+            merchantName: data['merchantName'] as String?,
+            categoryName: data['categoryName'] as String?,
+            recurringTransactionAmount: _parseToDouble(data['recurringTransactionAmount'])!,
+            currency: data['currency'] as String? ?? 'BHD',
+            overallSpentAmount: _parseToDouble(data['overallSpentAmount'])!,
+            numberOfTransactions: data['numberOfTransactions'] as int? ?? 0,
+            firstPaymentDate: data['firstPaymentDate'].toString(),
+            expectedNextPaymentDate: data['expectedNextPaymentDate'].toString(),
+            fontFamily: widget.fontFamily,
+            lang: widget.lang,
+          );
 
-      case 'AMOUNT_VALUE':
-        return AmountValueCard(
-          title: data['title'] as String? ?? 'Amount',
-          imageUrl: data['imageUrl'] as String?,
-          amount: _parseToDouble(data['amount']) ?? 0.0,
-          currency: data['currency'] as String? ?? 'BHD',
-          fontFamily: widget.fontFamily,
-        );
+        case 'SAVING_GOAL':
+          // All three amounts are required to render a meaningful progress bar.
+          if (_parseToDouble(data['amountSaved']) == null) return null;
+          if (_parseToDouble(data['amountRemaining']) == null) return null;
+          if (_parseToDouble(data['targetAmount']) == null) return null;
+          return SavingGoalCard(
+            name: data['name'] as String? ?? MeAiLocalizations.savingsGoal(widget.lang),
+            imageUrl: data['imageUrl'] as String?,
+            amountSaved: _parseToDouble(data['amountSaved'])!,
+            amountRemaining: _parseToDouble(data['amountRemaining'])!,
+            targetAmount: _parseToDouble(data['targetAmount'])!,
+            targetDate: data['targetDate'] as String? ?? '',
+            fontFamily: widget.fontFamily,
+            lang: widget.lang,
+          );
 
-      case 'SPENDING_LIMIT_ALERT':
-        return SpendingLimitAlertCard(
-          customerName: data['customerName'] as String? ?? 'Customer',
-          customerImageUrl: data['customerImageUrl'] as String? ?? '',
-          categoryImageUrl: data['categoryImageUrl'] as String?,
-          categoryName: data['categoryName'] as String?,
-          descriptionOfCurrentStatus: data['descriptionOfCurrentStatus'] as String,
-          currency: data['currency'] as String? ?? 'BHD',
-          limitAmountOnCategory: _parseToDouble(data['limitAmountOnCategory']) ?? 0.0,
-          currentSpendOnCategory: _parseToDouble(data['currentSpendOnCategory']) ?? 0.0,
-          fontFamily: widget.fontFamily,
-        );
+        case 'INVESTMENT':
+          // expectedProfitRate is the primary metric of this card.
+          if (_parseToDouble(data['expectedProfitRate']) == null) return null;
+          return InvestmentCard(
+            title: data['title'] as String? ?? MeAiLocalizations.investment(widget.lang),
+            imageUrl: data['imageUrl'] as String?,
+            period: data['period'] as String?,
+            expectedProfitRate: _parseToDouble(data['expectedProfitRate'])!,
+            amount: _parseToDouble(data['amount']),
+            expectedProfitAtMaturity: _parseToDouble(data['expectedProfitAtMaturity']),
+            amountAtMaturityWithProfit: _parseToDouble(data['amountAtMaturityWithProfit']),
+            fontFamily: widget.fontFamily,
+            lang: widget.lang,
+          );
 
-      case 'LIST_OF_TRANSACTIONS':
-        return ListOfTransactionsCard(
-          transactions: (data['transactions'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-          fontFamily: widget.fontFamily,
-        );
+        case 'AMOUNT_VALUE':
+          // The entire purpose of this card is to display an amount.
+          if (_parseToDouble(data['amount']) == null) return null;
+          return AmountValueCard(
+            title: data['title'] as String? ?? MeAiLocalizations.amount(widget.lang),
+            imageUrl: data['imageUrl'] as String?,
+            amount: _parseToDouble(data['amount'])!,
+            currency: data['currency'] as String? ?? 'BHD',
+            fontFamily: widget.fontFamily,
+          );
 
-      case 'TABLE':
-        try {
-          // Convert tableRows to List<List<String>>
-          List<List<String>> tableRows = [];
-          
-          if (data is Map && data.containsKey('tableRows')) {
-            final rowsData = data['tableRows'];
-            if (rowsData != null && rowsData is List) {
-              tableRows = rowsData.map((row) {
-                if (row is List) {
-                  return row.map((cell) => cell.toString()).toList();
-                } else if (row is Map) {
-                  // If row is a map, convert values to list
-                  return row.values.map((cell) => cell.toString()).toList();
-                }
+        case 'SPENDING_LIMIT_ALERT':
+          // descriptionOfCurrentStatus is non-nullable in the widget constructor.
+          // Both limit figures are required for the progress bar.
+          if (data['descriptionOfCurrentStatus'] == null) return null;
+          if (_parseToDouble(data['limitAmountOnCategory']) == null) return null;
+          if (_parseToDouble(data['currentSpendOnCategory']) == null) return null;
+          return SpendingLimitAlertCard(
+            customerName: data['customerName'] as String? ?? MeAiLocalizations.customer(widget.lang),
+            customerImageUrl: data['customerImageUrl'] as String? ?? '',
+            categoryImageUrl: data['categoryImageUrl'] as String?,
+            categoryName: data['categoryName'] as String?,
+            descriptionOfCurrentStatus: data['descriptionOfCurrentStatus'].toString(),
+            currency: data['currency'] as String? ?? 'BHD',
+            limitAmountOnCategory: _parseToDouble(data['limitAmountOnCategory'])!,
+            currentSpendOnCategory: _parseToDouble(data['currentSpendOnCategory'])!,
+            fontFamily: widget.fontFamily,
+            lang: widget.lang,
+          );
+
+        case 'LIST_OF_TRANSACTIONS':
+          // A non-empty list of transactions is required.
+          final rawList = data['transactions'];
+          if (rawList is! List || rawList.isEmpty) return null;
+          return ListOfTransactionsCard(
+            transactions: rawList.cast<Map<String, dynamic>>(),
+            fontFamily: widget.fontFamily,
+            lang: widget.lang,
+          );
+
+        case 'TABLE':
+          final rowsData = data['tableRows'];
+          if (rowsData is! List) return null;
+          final tableRows = rowsData
+              .map<List<String>>((row) {
+                if (row is List) return row.map((c) => c.toString()).toList();
+                if (row is Map) return row.values.map((c) => c.toString()).toList();
                 return <String>[];
-              }).where((row) => row.isNotEmpty).toList();
-            }
-          }
-          
-          // Only return TableCard if we have valid rows
-          if (tableRows.isNotEmpty) {
-            return TableCard(
-              tableRows: tableRows,
-              fontFamily: widget.fontFamily,
-            );
-          }
-        } catch (e) {
-          // If there's an error, fall through to default widget
-          debugPrint('Error building TABLE widget: $e');
-          debugPrint('Table data: $data');
-        }
-        
-        // Fall back to default widget if table data is invalid
-        return _buildDefaultWidget(data);
+              })
+              .where((row) => row.isNotEmpty)
+              .toList();
+          if (tableRows.isEmpty) return null;
+          return TableCard(tableRows: tableRows, fontFamily: widget.fontFamily);
 
-      default:
-        return _buildDefaultWidget(data);
+        default:
+          return null;
+      }
+    } catch (e) {
+      debugPrint('MeAi: skipping custom object — error building widget ($type): $e');
+      return null;
     }
   }
 
-  Widget _buildDefaultWidget(dynamic data) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Text(
-        data.toString(),
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.grey.shade700,
-        ),
-      ),
-    );
-  }
 
   void _startTyping() {
     _timer = Timer.periodic(widget.speed, (timer) {
@@ -401,12 +407,13 @@ class _TypingTextState extends State<TypingText> {
         final text = currentSegment.text!;
         if (_currentCharIndex < text.length) {
           final visibleText = text.substring(0, _currentCharIndex + 1);
+          final dir = widget.textDirection ?? textDirectionForContent(text);
           if (_visibleWidgets.isEmpty || _visibleWidgets.last is! Text) {
             // Add new text widget if last item is not text
-            _visibleWidgets.add(Text(visibleText, style: widget.style));
+            _visibleWidgets.add(Text(visibleText, style: widget.style, textDirection: dir));
           } else {
             // Replace last text widget with updated version
-            _visibleWidgets[_visibleWidgets.length - 1] = Text(visibleText, style: widget.style);
+            _visibleWidgets[_visibleWidgets.length - 1] = Text(visibleText, style: widget.style, textDirection: dir);
           }
 
           _currentCharIndex++;
@@ -448,9 +455,13 @@ class _TypingTextState extends State<TypingText> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: _visibleWidgets,
+    final isRtl = (widget.textDirection ?? textDirectionForContent(widget.fullText)) == TextDirection.rtl;
+    return Directionality(
+      textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+      child: Column(
+        crossAxisAlignment: isRtl ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: _visibleWidgets,
+      ),
     );
   }
 }

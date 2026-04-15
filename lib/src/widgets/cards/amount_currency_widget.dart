@@ -37,24 +37,37 @@ class AmountCurrencyWidget extends StatelessWidget {
     final integerPart = parts[0];
     final decimalPart = parts.length > 1 ? parts[1] : "000";
 
-    return Row(
-      crossAxisAlignment:
-          isCenterAlign ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-      children: [
-        if (!hideCurrency)
-          Text(
-            currency,
-            style: TextStyle(
-              color: currencyColor,
-              fontWeight: currencyFontWeight,
-              fontSize: fontSize * (isSmallerFractions ? 0.4 : 0.5),
-              fontFamily: fontFamily,
+    // Always render the amount LTR so that currency + number ordering
+    // (e.g. "BHD 12.500") is preserved even when the parent card is RTL.
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Row(
+        crossAxisAlignment:
+            isCenterAlign ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+        children: [
+          if (!hideCurrency)
+            Text(
+              currency,
+              style: TextStyle(
+                color: currencyColor,
+                fontWeight: currencyFontWeight,
+                fontSize: fontSize * (isSmallerFractions ? 0.4 : 0.5),
+                fontFamily: fontFamily,
+              ),
             ),
-          ),
-        if (!hideCurrency) const SizedBox(width: 3),
-        if (showPositiveSign && double.tryParse(amount) != null && double.parse(amount) > 0)
+          if (!hideCurrency) const SizedBox(width: 3),
+          if (showPositiveSign && double.tryParse(amount) != null && double.parse(amount) > 0)
+            Text(
+              "+",
+              style: TextStyle(
+                color: amountColor,
+                fontWeight: amountFontWeight,
+                fontSize: fontSize,
+                fontFamily: fontFamily,
+              ),
+            ),
           Text(
-            "+",
+            "$integerPart.",
             style: TextStyle(
               color: amountColor,
               fontWeight: amountFontWeight,
@@ -62,25 +75,17 @@ class AmountCurrencyWidget extends StatelessWidget {
               fontFamily: fontFamily,
             ),
           ),
-        Text(
-          "$integerPart.",
-          style: TextStyle(
-            color: amountColor,
-            fontWeight: amountFontWeight,
-            fontSize: fontSize,
-            fontFamily: fontFamily,
+          Text(
+            decimalPart,
+            style: TextStyle(
+              color: amountColor,
+              fontWeight: FontWeight.w400,
+              fontSize: fontSize * (isSmallerFractions ? 0.5 : 0.66),
+              fontFamily: fontFamily,
+            ),
           ),
-        ),
-        Text(
-          decimalPart,
-          style: TextStyle(
-            color: amountColor,
-            fontWeight: FontWeight.w400,
-            fontSize: fontSize * (isSmallerFractions ? 0.5 : 0.66),
-            fontFamily: fontFamily,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

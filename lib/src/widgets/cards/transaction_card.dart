@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/meai_localizations.dart';
 import 'amount_currency_widget.dart';
 
 /// Transaction card widget
@@ -12,6 +13,7 @@ class TransactionCard extends StatelessWidget {
   final String? categoryImageUrl;
   final String? entryType;
   final String? fontFamily;
+  final String lang;
 
   const TransactionCard({
     super.key,
@@ -24,11 +26,14 @@ class TransactionCard extends StatelessWidget {
     this.categoryImageUrl,
     this.entryType,
     this.fontFamily,
+    this.lang = 'en',
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Directionality(
+      textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
       decoration: BoxDecoration(
         gradient: SweepGradient(
           startAngle: 0,
@@ -96,8 +101,8 @@ class TransactionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    merchantName ?? transactionDescription ?? 
-                    '${entryType != null && entryType!.toLowerCase() == 'd' ? 'Debit' : 'Credit'} transaction',
+                    merchantName ?? transactionDescription ??
+                    '${entryType != null && entryType!.toLowerCase() == 'd' ? MeAiLocalizations.debit(lang) : MeAiLocalizations.credit(lang)}${MeAiLocalizations.transactionSuffix(lang)}',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,
@@ -130,7 +135,7 @@ class TransactionCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
-
