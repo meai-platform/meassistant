@@ -1,6 +1,7 @@
 /// MeAI Assistant Plugin
 ///
 /// A Flutter plugin for embedding a customizable AI assistant in your app.
+library;
 
 export 'src/meai_assistant.dart';
 export 'src/config/assistant_config.dart';

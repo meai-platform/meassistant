@@ -46,11 +46,11 @@ class RecurringTransactionCard extends StatelessWidget {
           colors: [
             const Color(0xFFA829F0), // top-left
             const Color(0xFF5E308B), // fade
-            Colors.white.withOpacity(0.7), // top-right
-            Colors.white.withOpacity(0.7), // bottom-left
+            Colors.white.withValues(alpha: 0.7), // top-right
+            Colors.white.withValues(alpha: 0.7), // bottom-left
             const Color(0xFFA829F0), // bottom-right
             const Color(0xFF5E308B), // fade
-            Colors.white.withOpacity(0.7), // closing loop
+            Colors.white.withValues(alpha: 0.7), // closing loop
           ],
           stops: const [0.0, 0.15, 0.35, 0.45, 0.50, 0.70, 1.0],
         ),
@@ -148,7 +148,7 @@ class RecurringTransactionCard extends StatelessWidget {
               color: const Color(0xfff6f4fe), // mePurple25
               content: Column(
                 children: [
-                  _buildAmountDetailRow(MeAiLocalizations.overallYouSpent(lang), '${overallSpentAmount.toStringAsFixed(3)}'),
+                  _buildAmountDetailRow(MeAiLocalizations.overallYouSpent(lang), overallSpentAmount.toStringAsFixed(3)),
                   const SizedBox(height: 16),
                   _buildDetailRow(MeAiLocalizations.transactions(lang), MeAiLocalizations.timesCount(lang, numberOfTransactions)),
                   const SizedBox(height: 16),
@@ -257,9 +257,7 @@ class RecurringTransactionCard extends StatelessWidget {
       DateTime? date = inputFormat.tryParse(dateString);
       
       // If that fails, try standard DateTime.parse
-      if (date == null) {
-        date = DateTime.tryParse(dateString);
-      }
+      date ??= DateTime.tryParse(dateString);
       
       // Format as dd MMM yyyy (as per me-card-app Application.friendlyDateFormat2)
       if (date != null) {

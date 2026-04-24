@@ -8,7 +8,7 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -67,11 +67,11 @@ class MyHomePage extends StatefulWidget {
   final ValueChanged<String> onLangChanged;
 
   const MyHomePage({
-    Key? key,
+    super.key,
     required this.assistant,
     required this.selectedLang,
     required this.onLangChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();

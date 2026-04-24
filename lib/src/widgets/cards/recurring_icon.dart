@@ -15,7 +15,7 @@ class RecurringIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: _getLargerSize(45),
       height: _getLargerSize(45),
       child: Stack(

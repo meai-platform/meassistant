@@ -9,10 +9,10 @@ class AssistantFloatingButton extends StatefulWidget {
   final AssistantService assistantService;
 
   const AssistantFloatingButton({
-    Key? key,
+    super.key,
     required this.config,
     required this.assistantService,
-  }) : super(key: key);
+  });
 
   @override
   State<AssistantFloatingButton> createState() =>
@@ -98,7 +98,7 @@ class _AssistantFloatingButtonState extends State<AssistantFloatingButton>
     
     return GestureDetector(
       onTap: () => service.showModal(),
-      child: Container(
+      child: SizedBox(
         width: 55,
         height: 55,
         child: Stack(
@@ -106,7 +106,7 @@ class _AssistantFloatingButtonState extends State<AssistantFloatingButton>
             Container(
               width: 55,
               height: 55,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
               ),
               child: ClipRRect(
@@ -116,7 +116,7 @@ class _AssistantFloatingButtonState extends State<AssistantFloatingButton>
                   child: Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.grey.withOpacity(0.0),
+                      color: Colors.grey.withValues(alpha: 0.0),
                     ),
                   ),
                 ),

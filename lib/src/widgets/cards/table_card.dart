@@ -18,7 +18,7 @@ class TableCard extends StatelessWidget {
     final headers = tableRows.first;
     final rows = tableRows.skip(1).toList();
 
-    final _scrollController = ScrollController();
+    final scrollController = ScrollController();
 
     return Container(
       decoration: BoxDecoration(
@@ -28,11 +28,11 @@ class TableCard extends StatelessWidget {
           colors: [
             const Color(0xFFA829F0), // top-left
             const Color(0xFF5E308B), // fade
-            Colors.white.withOpacity(0.7), // top-right
-            Colors.white.withOpacity(0.7), // bottom-left
+            Colors.white.withValues(alpha: 0.7), // top-right
+            Colors.white.withValues(alpha: 0.7), // bottom-left
             const Color(0xFFA829F0), // bottom-right
             const Color(0xFF5E308B), // fade
-            Colors.white.withOpacity(0.7), // closing loop
+            Colors.white.withValues(alpha: 0.7), // closing loop
           ],
           stops: const [0.0, 0.15, 0.35, 0.45, 0.50, 0.70, 1.0],
         ),
@@ -48,7 +48,7 @@ class TableCard extends StatelessWidget {
         ),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          controller: _scrollController,
+          controller: scrollController,
           child: DataTable(
               columns: headers
                   .map((h) => DataColumn(

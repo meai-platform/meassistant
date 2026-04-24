@@ -22,11 +22,11 @@ class AssistantModal extends StatefulWidget {
   final AssistantService assistantService;
 
   const AssistantModal({
-    Key? key,
+    super.key,
     required this.config,
     required this.assistantStore,
     required this.assistantService,
-  }) : super(key: key);
+  });
 
   @override
   State<AssistantModal> createState() => _AssistantModalState();
@@ -40,7 +40,7 @@ class _AssistantModalState extends State<AssistantModal>
   late Animation<Offset> _slideAnimation;
   late StreamSubscription<bool> keyboardSubscription;
 
-  FocusNode _textFieldFocusNode = FocusNode();
+  final FocusNode _textFieldFocusNode = FocusNode();
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -251,7 +251,7 @@ class _AssistantModalState extends State<AssistantModal>
                 builder: (context, child) {
                   return PopScope(
                     canPop: false,
-                    onPopInvoked: (didPop) {
+                    onPopInvokedWithResult: (didPop, result) {
                       if (!didPop) {
                         _closeModal();
                       }
@@ -470,7 +470,7 @@ class _AssistantModalState extends State<AssistantModal>
             ),
             textAlign: TextAlign.center,
           ),
-          Expanded(child: const SizedBox.shrink()),
+          const Expanded(child: SizedBox.shrink()),
           Observer(
             builder: (_) {
               // Use API suggested prompts if available, otherwise fall back to config
@@ -482,7 +482,7 @@ class _AssistantModalState extends State<AssistantModal>
                 builder: (context, isKeyboardVisible, child) {
                   // Show skeleton loading when creating conversation
                   if (widget.assistantStore.isCreatingConversation && !isKeyboardVisible) {
-                return Container(
+                return SizedBox(
                   height: 90,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
@@ -498,7 +498,7 @@ class _AssistantModalState extends State<AssistantModal>
               }
               
                   if (prompts != null && prompts.isNotEmpty && !isKeyboardVisible) {
-                    return Container(
+                    return SizedBox(
                       height: 90,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
@@ -515,7 +515,7 @@ class _AssistantModalState extends State<AssistantModal>
                   
                   // Fall back to config suggested prompts if API didn't return any
                   if (!isKeyboardVisible && widget.config.suggestionPrompts != null) {
-                    return Container(
+                    return SizedBox(
                       height: 90,
                       child: ListView(
                         scrollDirection: Axis.horizontal,

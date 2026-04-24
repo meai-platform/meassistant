@@ -27,11 +27,11 @@ class ListOfTransactionsCard extends StatelessWidget {
           colors: [
             const Color(0xFFA829F0), // top-left
             const Color(0xFF5E308B), // fade
-            Colors.white.withOpacity(0.7), // top-right
-            Colors.white.withOpacity(0.7), // bottom-left
+            Colors.white.withValues(alpha: 0.7), // top-right
+            Colors.white.withValues(alpha: 0.7), // bottom-left
             const Color(0xFFA829F0), // bottom-right
             const Color(0xFF5E308B), // fade
-            Colors.white.withOpacity(0.7), // closing loop
+            Colors.white.withValues(alpha: 0.7), // closing loop
           ],
           stops: const [0.0, 0.15, 0.35, 0.45, 0.50, 0.70, 1.0],
         ),
@@ -57,7 +57,6 @@ class ListOfTransactionsCard extends StatelessWidget {
               String? merchantImageUrl = transaction['merchantImageUrl'] as String?;
               String? categoryName = transaction['categoryName'] as String?;
               double? amount = (transaction['amount'] as num?)?.toDouble() ?? 0.0;
-              String? currency = transaction['currency'] as String? ?? 'BHD';
               String? merchantName = transaction['merchantName'] as String?;
               String? transactionDescription = transaction['transactionDescription'] as String?;
               String? categoryImageUrl = transaction['categoryImageUrl'] as String?;
@@ -80,7 +79,7 @@ class ListOfTransactionsCard extends StatelessWidget {
                                     width: 30,
                                     height: 30,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFED401).withOpacity(0.1),
+                                      color: const Color(0xFFFED401).withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(Icons.account_balance_wallet, size: 18),
@@ -93,7 +92,7 @@ class ListOfTransactionsCard extends StatelessWidget {
                                 width: 30,
                                 height: 30,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFED401).withOpacity(0.1),
+                                  color: const Color(0xFFFED401).withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(Icons.account_balance_wallet, size: 18),
@@ -107,7 +106,7 @@ class ListOfTransactionsCard extends StatelessWidget {
                         children: [
                           Text(
                             merchantName ?? transactionDescription ??
-                            '${entryType != null && entryType!.toLowerCase() == 'd' ? MeAiLocalizations.debit(lang) : MeAiLocalizations.credit(lang)}${MeAiLocalizations.transactionSuffix(lang)}',
+                            '${entryType != null && entryType.toLowerCase() == 'd' ? MeAiLocalizations.debit(lang) : MeAiLocalizations.credit(lang)}${MeAiLocalizations.transactionSuffix(lang)}',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w400,
@@ -118,7 +117,7 @@ class ListOfTransactionsCard extends StatelessWidget {
                           if (categoryName != null) ...[
                             const SizedBox(height: 2),
                             Text(
-                              categoryName!,
+                              categoryName,
                               style: TextStyle(
                                 fontSize: 13,
                                 color: const Color(0xff686878), // dark600
@@ -131,7 +130,7 @@ class ListOfTransactionsCard extends StatelessWidget {
                       ),
                     ),
                     AmountCurrencyWidget(
-                      amount: '${entryType != null && entryType!.toLowerCase() == 'd' ? '-' : ''}${amount.toStringAsFixed(3)}',
+                      amount: '${entryType != null && entryType.toLowerCase() == 'd' ? '-' : ''}${amount.toStringAsFixed(3)}',
                       fontSize: 18,
                       amountFontWeight: FontWeight.w500,
                       amountColor: const Color(0xff26262B), // dark900
@@ -140,7 +139,7 @@ class ListOfTransactionsCard extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

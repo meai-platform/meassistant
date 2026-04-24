@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../utils/meai_localizations.dart';
 import '../utils/text_direction_utils.dart';

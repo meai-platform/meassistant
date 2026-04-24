@@ -8,6 +8,7 @@ import '../services/assistant_service.dart';
 part 'assistant_store.g.dart';
 
 /// Store for managing assistant state and messages
+// ignore: library_private_types_in_public_api
 class AssistantStore = _AssistantStore with _$AssistantStore;
 
 abstract class _AssistantStore with Store {
