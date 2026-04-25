@@ -43,9 +43,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Generated files
-*.g.dart
-*.freezed.dart
+# Generated files (excluded from app projects but must be committed in published packages)
+# *.g.dart
+# *.freezed.dart
 
 PUBLISHING.md
 PRE_PUBLISH_CHECKLIST.md
