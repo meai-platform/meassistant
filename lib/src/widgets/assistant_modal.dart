@@ -47,6 +47,7 @@ class _AssistantModalState extends State<AssistantModal>
   // Use ValueNotifier for keyboard visibility to avoid full rebuilds
   final ValueNotifier<bool> _keyboardVisibleNotifier = ValueNotifier<bool>(false);
   bool _isKeyboardVisible = false;
+  bool _isClosing = false;
   bool _isInConversation = false;
   bool _isFirstTime = true;
   bool _isDontAnimateLastMsg = false;
@@ -158,8 +159,10 @@ class _AssistantModalState extends State<AssistantModal>
   }
 
   void _closeModal() {
+    if (_isClosing) return;
+    _isClosing = true;
     _animationController.reverse().then((_) {
-      widget.assistantService.hideModal();
+      if (mounted) widget.assistantService.hideModal();
     });
   }
 
@@ -241,22 +244,20 @@ class _AssistantModalState extends State<AssistantModal>
     }
     
     final isArabic = widget.config.isArabic;
-    return Directionality(
-      textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
-      child: Overlay(
-      initialEntries: [
-        OverlayEntry(
-          builder: (context) => AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return PopScope(
-                    canPop: false,
-                    onPopInvokedWithResult: (didPop, result) {
-                      if (!didPop) {
-                        _closeModal();
-                      }
-                    },
-                    child: Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _closeModal();
+      },
+      child: Directionality(
+        textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
+        child: Overlay(
+        initialEntries: [
+          OverlayEntry(
+            builder: (context) => AnimatedBuilder(
+                  animation: _animationController,
+                  builder: (context, child) {
+                    return Scaffold(
                       backgroundColor: Colors.transparent,
                       resizeToAvoidBottomInset: true,
                       body: Stack(
@@ -293,12 +294,12 @@ class _AssistantModalState extends State<AssistantModal>
                           ),
                         ],
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
         )
       ],
+      ),
       ),
     );
   }

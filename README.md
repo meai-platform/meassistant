@@ -21,7 +21,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  meai_assistant: ^1.2.0
+  meai_assistant: ^1.2.3
 ```
 
 Then run:

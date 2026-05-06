@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/meai_localizations.dart';
+import '../../utils/parse_utils.dart';
 import 'amount_currency_widget.dart';
 
 /// List of transactions card widget
@@ -56,7 +57,7 @@ class ListOfTransactionsCard extends StatelessWidget {
               
               String? merchantImageUrl = transaction['merchantImageUrl'] as String?;
               String? categoryName = transaction['categoryName'] as String?;
-              double? amount = (transaction['amount'] as num?)?.toDouble() ?? 0.0;
+              double amount = ParseUtils.parseDoubleOrDefault(transaction['amount']);
               String? merchantName = transaction['merchantName'] as String?;
               String? transactionDescription = transaction['transactionDescription'] as String?;
               String? categoryImageUrl = transaction['categoryImageUrl'] as String?;
