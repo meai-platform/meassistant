@@ -166,8 +166,27 @@ class _AssistantModalState extends State<AssistantModal>
     });
   }
 
+  void _startNewConversation() {
+    if (widget.assistantStore.isLoadingAssistantResponse) return;
+
+    widget.assistantStore.clearMessages();
+    _conversationAnimationController.reset();
+
+    setState(() {
+      _isInConversation = false;
+      _isDontAnimateLastMsg = false;
+      _isAnimatingText = false;
+      _textController.clear();
+      _loadingMessage = MeAiLocalizations.analyzingMessage(widget.config.lang);
+    });
+
+    _createConversationIfNeeded();
+  }
+
   void _sendMessage() async {
     if (_textController.text.trim().isEmpty) return;
+    if (widget.assistantStore.isLoadingAssistantResponse ||
+        widget.assistantStore.isCreatingConversation) return;
 
     final userMessage = _textController.text.trim();
     _textController.clear();
@@ -378,13 +397,19 @@ class _AssistantModalState extends State<AssistantModal>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Icon(
-                        //   Icons.access_time,
-                        //   size: 24,
-                        //   color: widget.config.effectiveColorScheme.textColor,
-                        // ),
+                        if (_isInConversation)
+                          GestureDetector(
+                            onTap: _startNewConversation,
+                            child: Icon(
+                              Icons.add_comment_outlined,
+                              size: 24,
+                              color: widget.config.effectiveColorScheme.textColor,
+                            ),
+                          )
+                        else
+                          const SizedBox.shrink(),
                         GestureDetector(
                           onTap: _closeModal,
                           child: Icon(
@@ -789,7 +814,11 @@ class _AssistantModalState extends State<AssistantModal>
   }
 
   Widget _buildInputArea() {
-    return Container(
+    return Observer(
+      builder: (_) {
+        final isBusy = widget.assistantStore.isLoadingAssistantResponse ||
+            widget.assistantStore.isCreatingConversation;
+        return Container(
       padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
       child: Column(
         children: [
@@ -815,7 +844,6 @@ class _AssistantModalState extends State<AssistantModal>
               onChanged: (str) {
                 setState(() {});
               },
-              enabled: !widget.assistantStore.isLoadingAssistantResponse && !widget.assistantStore.isCreatingConversation,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
@@ -837,13 +865,15 @@ class _AssistantModalState extends State<AssistantModal>
                 suffixIcon: _textController.text.isEmpty
                     ? null
                     : InkWell(
-                        onTap: _sendMessage,
+                        onTap: isBusy ? null : _sendMessage,
                         child: Container(
                           margin: const EdgeInsets.all(10),
                           child: Icon(
                             Icons.send,
                             size: 20,
-                            color: widget.config.effectiveColorScheme.primaryColor,
+                            color: isBusy
+                                ? widget.config.effectiveColorScheme.hintTextColor
+                                : widget.config.effectiveColorScheme.primaryColor,
                           ),
                         ),
                       ),
@@ -888,6 +918,8 @@ class _AssistantModalState extends State<AssistantModal>
           ),
         ],
       ),
+        );
+      },
     );
   }
 

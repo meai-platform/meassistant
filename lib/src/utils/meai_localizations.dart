@@ -23,6 +23,9 @@ class MeAiLocalizations {
       ? 'أنت تتحدث مع مساعد مالي ذكاء اصطناعي - مدعوم من me.Ai'
       : "You're chatting with an AI Financial Assistant - Powered by me.Ai";
 
+  static String newConversation(String lang) =>
+      _isAr(lang) ? 'محادثة جديدة' : 'New chat';
+
   // ── Default config strings ────────────────────────────────────────────────
 
   static String defaultIntroText(String lang) => _isAr(lang)
