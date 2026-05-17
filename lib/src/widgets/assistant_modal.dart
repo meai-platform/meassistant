@@ -45,7 +45,8 @@ class _AssistantModalState extends State<AssistantModal>
   final ScrollController _scrollController = ScrollController();
 
   // Use ValueNotifier for keyboard visibility to avoid full rebuilds
-  final ValueNotifier<bool> _keyboardVisibleNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _keyboardVisibleNotifier =
+      ValueNotifier<bool>(false);
   bool _isKeyboardVisible = false;
   bool _isClosing = false;
   bool _isInConversation = false;
@@ -135,7 +136,7 @@ class _AssistantModalState extends State<AssistantModal>
 
   void _createConversationIfNeeded() async {
     // Only create conversation if one doesn't exist and we're not already creating one
-    if (widget.assistantStore.conversationId == null && 
+    if (widget.assistantStore.conversationId == null &&
         !widget.assistantStore.isCreatingConversation) {
       final success = await widget.assistantStore.createConversation();
       if (success && mounted) {
@@ -186,7 +187,9 @@ class _AssistantModalState extends State<AssistantModal>
   void _sendMessage() async {
     if (_textController.text.trim().isEmpty) return;
     if (widget.assistantStore.isLoadingAssistantResponse ||
-        widget.assistantStore.isCreatingConversation) return;
+        widget.assistantStore.isCreatingConversation) {
+      return;
+    }
 
     final userMessage = _textController.text.trim();
     _textController.clear();
@@ -210,7 +213,7 @@ class _AssistantModalState extends State<AssistantModal>
 
     // Wait for layout to complete before scrolling
     WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
+      _scrollToBottom();
     });
 
     AssistantResponse? response =
@@ -228,7 +231,7 @@ class _AssistantModalState extends State<AssistantModal>
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
-       _scrollController.jumpTo(
+      _scrollController.jumpTo(
         _scrollController.position.maxScrollExtent,
       );
       // final maxScroll = _scrollController.position.maxScrollExtent;
@@ -239,7 +242,8 @@ class _AssistantModalState extends State<AssistantModal>
   }
 
   void _scrollToBottomAnimate() {
-    if (_scrollController.hasClients && !_scrollController.position.isScrollingNotifier.value) {
+    if (_scrollController.hasClients &&
+        !_scrollController.position.isScrollingNotifier.value) {
       final maxScroll = _scrollController.position.maxScrollExtent;
       if (maxScroll.isFinite && maxScroll >= 0) {
         _scrollController.animateTo(
@@ -261,7 +265,7 @@ class _AssistantModalState extends State<AssistantModal>
         _conversationAnimationController.forward();
       }
     }
-    
+
     final isArabic = widget.config.isArabic;
     return PopScope(
       canPop: false,
@@ -271,54 +275,55 @@ class _AssistantModalState extends State<AssistantModal>
       child: Directionality(
         textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
         child: Overlay(
-        initialEntries: [
-          OverlayEntry(
-            builder: (context) => AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return Scaffold(
-                      backgroundColor: Colors.transparent,
-                      resizeToAvoidBottomInset: true,
-                      body: Stack(
-                        children: [
-                          FadeTransition(
-                            opacity: _fadeAnimation,
-                            child: GestureDetector(
-                              onTap: _closeModal,
-                              behavior: HitTestBehavior.opaque,
-                              child: Container(
-                                width: double.infinity,
-                                height: double.infinity,
-                                color: widget.config.effectiveColorScheme.overlayBackgroundColor,
-                              ),
+          initialEntries: [
+            OverlayEntry(
+              builder: (context) => AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return Scaffold(
+                    backgroundColor: Colors.transparent,
+                    resizeToAvoidBottomInset: true,
+                    body: Stack(
+                      children: [
+                        FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: GestureDetector(
+                            onTap: _closeModal,
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              width: double.infinity,
+                              height: double.infinity,
+                              color: widget.config.effectiveColorScheme
+                                  .overlayBackgroundColor,
                             ),
                           ),
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0, 1),
-                                end: Offset.zero,
-                              ).animate(CurvedAnimation(
-                                parent: _animationController,
-                                curve: Curves.easeOutCubic,
-                              )),
-                              child: FadeTransition(
-                                opacity: _fadeAnimation,
-                                child: _buildBottomSheetContent(),
-                              ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 1),
+                              end: Offset.zero,
+                            ).animate(CurvedAnimation(
+                              parent: _animationController,
+                              curve: Curves.easeOutCubic,
+                            )),
+                            child: FadeTransition(
+                              opacity: _fadeAnimation,
+                              child: _buildBottomSheetContent(),
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        )
-      ],
-      ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
@@ -331,129 +336,146 @@ class _AssistantModalState extends State<AssistantModal>
         // Cache MediaQuery to avoid repeated lookups
         final mediaQuery = MediaQuery.of(context);
         final screenHeight = mediaQuery.size.height;
-        final modalHeight = isKeyboardVisible ? screenHeight * 0.5 : screenHeight * 0.9;
-            
+        final modalHeight =
+            isKeyboardVisible ? screenHeight * 0.5 : screenHeight * 0.9;
+
         return GestureDetector(
-          onTap: () {
-            // Unfocus the text field if it has focus
-            if (_textFieldFocusNode.hasFocus) {
-              _textFieldFocusNode.unfocus();
-            }
-          },
-          child: RepaintBoundary(
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOutCubic,
-              child: Container(
-                width: double.infinity,
-                constraints: BoxConstraints(
-                  maxHeight: modalHeight,
-                  minHeight: modalHeight,
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                  child: RepaintBoundary(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: Container(
-              decoration: BoxDecoration(
-                color: widget.config.effectiveColorScheme.modalBackgroundColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                border: Border.all(
-                  color: widget.config.effectiveColorScheme.modalBorderColor,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.config.effectiveColorScheme.modalShadowColor,
-                    blurRadius: 20,
-                    offset: const Offset(0, -10),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Center(
-                      child:                       Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: widget.config.effectiveColorScheme.handleBarColor,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+            onTap: () {
+              // Unfocus the text field if it has focus
+              if (_textFieldFocusNode.hasFocus) {
+                _textFieldFocusNode.unfocus();
+              }
+            },
+            child: RepaintBoundary(
+                child: AnimatedSize(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    child: Container(
+                      width: double.infinity,
+                      constraints: BoxConstraints(
+                        maxHeight: modalHeight,
+                        minHeight: modalHeight,
                       ),
-                    ),
-                  ),
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        if (_isInConversation)
-                          GestureDetector(
-                            onTap: _startNewConversation,
-                            child: Icon(
-                              Icons.add_comment_outlined,
-                              size: 24,
-                              color: widget.config.effectiveColorScheme.textColor,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                        child: RepaintBoundary(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: widget.config.effectiveColorScheme
+                                    .modalBackgroundColor,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(24),
+                                  topRight: Radius.circular(24),
+                                ),
+                                border: Border.all(
+                                  color: widget.config.effectiveColorScheme
+                                      .modalBorderColor,
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: widget.config.effectiveColorScheme
+                                        .modalShadowColor,
+                                    blurRadius: 20,
+                                    offset: const Offset(0, -10),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    child: Center(
+                                      child: Container(
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: widget
+                                              .config
+                                              .effectiveColorScheme
+                                              .handleBarColor,
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20, vertical: 0),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        if (_isInConversation)
+                                          GestureDetector(
+                                            onTap: _startNewConversation,
+                                            child: Icon(
+                                              Icons.add_comment_outlined,
+                                              size: 24,
+                                              color: widget
+                                                  .config
+                                                  .effectiveColorScheme
+                                                  .textColor,
+                                            ),
+                                          )
+                                        else
+                                          const SizedBox.shrink(),
+                                        GestureDetector(
+                                          onTap: _closeModal,
+                                          child: Icon(
+                                            Icons.close,
+                                            size: 24,
+                                            color: widget.config
+                                                .effectiveColorScheme.textColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    child: RepaintBoundary(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          FocusScope.of(context).unfocus();
+                                        },
+                                        behavior: HitTestBehavior.translucent,
+                                        child: Stack(
+                                          children: [
+                                            if (!_isInConversation)
+                                              _buildWelcomeScreen(),
+                                            if (_isInConversation)
+                                              _buildConversationScreen(),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  _buildInputArea(),
+                                  ValueListenableBuilder<bool>(
+                                    valueListenable: _keyboardVisibleNotifier,
+                                    builder:
+                                        (context, isKeyboardVisible, child) {
+                                      return SizedBox(
+                                        height: isKeyboardVisible ? 0 : 20,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
-                          )
-                        else
-                          const SizedBox.shrink(),
-                        GestureDetector(
-                          onTap: _closeModal,
-                          child: Icon(
-                            Icons.close,
-                            size: 24,
-                            color: widget.config.effectiveColorScheme.textColor,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: RepaintBoundary(
-                      child: GestureDetector(
-                        onTap: () {
-                          FocusScope.of(context).unfocus();
-                        },
-                        behavior: HitTestBehavior.translucent,
-                        child: Stack(
-                          children: [
-                            if (!_isInConversation) _buildWelcomeScreen(),
-                            if (_isInConversation) _buildConversationScreen(),
-                          ],
-                        ),
                       ),
-                    ),
-                  ),
-                  _buildInputArea(),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: _keyboardVisibleNotifier,
-                    builder: (context, isKeyboardVisible, child) {
-                      return SizedBox(
-                        height: isKeyboardVisible ? 0 : 20,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-        ))));
+                    ))));
       },
     );
   }
@@ -471,97 +493,104 @@ class _AssistantModalState extends State<AssistantModal>
                 flex: isKeyboardVisible ? 6 : 1,
                 child: const SizedBox.shrink(),
               ),
-          _buildImage(
-            widget.config.logoPath ?? 'packages/meai_assistant/assets/images/ai_button.png',
-            width: 90,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            widget.config.assistantName,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              color: widget.config.effectiveColorScheme.primaryColor,
-              fontFamily: widget.config.fontFamily ?? 'ReadexPro',
-            ),
-          ),
-          const SizedBox(height: 30),
-          Text(
-            widget.config.effectiveIntroText,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              color: widget.config.effectiveColorScheme.textColor,
-              fontFamily: widget.config.fontFamily ?? 'ReadexPro',
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const Expanded(child: SizedBox.shrink()),
-          Observer(
-            builder: (_) {
-              // Use API suggested prompts if available, otherwise fall back to config
-              final prompts = widget.assistantStore.suggestedPrompts;
-              final lang = widget.config.lang;
-              
-              return ValueListenableBuilder<bool>(
-                valueListenable: _keyboardVisibleNotifier,
-                builder: (context, isKeyboardVisible, child) {
-                  // Show skeleton loading when creating conversation
-                  if (widget.assistantStore.isCreatingConversation && !isKeyboardVisible) {
-                return SizedBox(
-                  height: 90,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                    children: List.generate(3, (index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 10),
-                        child: _buildSuggestionCardSkeleton(),
-                      );
-                    }),
-                  ),
-                );
-              }
-              
-                  if (prompts != null && prompts.isNotEmpty && !isKeyboardVisible) {
-                    return SizedBox(
-                      height: 90,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        children: prompts.map((prompt) {
-                          return Padding(
-                                  padding: const EdgeInsets.only(right: 10),
-                                  child: _buildSuggestionCard(prompt.getPrompt(lang)),
-                          );
-                        }).toList(),
-                      ),
-                    );
-                  }
-                  
-                  // Fall back to config suggested prompts if API didn't return any
-                  if (!isKeyboardVisible && widget.config.suggestionPrompts != null) {
-                    return SizedBox(
-                      height: 90,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        children: widget.config.suggestionPrompts!.map((prompt) {
-                          return Padding(
-                                  padding: const EdgeInsets.only(right: 10),
-                                  child: _buildSuggestionCard(prompt),
-                          );
-                        }).toList(),
-                      ),
-                    );
-                  }
-                  
-                  return const SizedBox.shrink();
+              _buildImage(
+                widget.config.logoPath ??
+                    'packages/meai_assistant/assets/images/ai_button.png',
+                width: 90,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                widget.config.assistantName,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: widget.config.effectiveColorScheme.primaryColor,
+                  fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+                ),
+              ),
+              const SizedBox(height: 30),
+              Text(
+                widget.config.effectiveIntroText,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: widget.config.effectiveColorScheme.textColor,
+                  fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const Expanded(child: SizedBox.shrink()),
+              Observer(
+                builder: (_) {
+                  // Use API suggested prompts if available, otherwise fall back to config
+                  final prompts = widget.assistantStore.suggestedPrompts;
+                  final lang = widget.config.lang;
+
+                  return ValueListenableBuilder<bool>(
+                    valueListenable: _keyboardVisibleNotifier,
+                    builder: (context, isKeyboardVisible, child) {
+                      // Show skeleton loading when creating conversation
+                      if (widget.assistantStore.isCreatingConversation &&
+                          !isKeyboardVisible) {
+                        return SizedBox(
+                          height: 90,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            children: List.generate(3, (index) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: _buildSuggestionCardSkeleton(),
+                              );
+                            }),
+                          ),
+                        );
+                      }
+
+                      if (prompts != null &&
+                          prompts.isNotEmpty &&
+                          !isKeyboardVisible) {
+                        return SizedBox(
+                          height: 90,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            children: prompts.map((prompt) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: _buildSuggestionCard(
+                                    prompt.getPrompt(lang)),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      }
+
+                      // Fall back to config suggested prompts if API didn't return any
+                      if (!isKeyboardVisible &&
+                          widget.config.suggestionPrompts != null) {
+                        return SizedBox(
+                          height: 90,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            children:
+                                widget.config.suggestionPrompts!.map((prompt) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: _buildSuggestionCard(prompt),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      }
+
+                      return const SizedBox.shrink();
+                    },
+                  );
                 },
-              );
-            },
-          ),
-          const SizedBox(height: 24),
+              ),
+              const SizedBox(height: 24),
             ],
           );
         },
@@ -582,10 +611,12 @@ class _AssistantModalState extends State<AssistantModal>
                   Expanded(
                     child: ListView.builder(
                       controller: _scrollController,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                       itemCount: widget.assistantStore.messages.length +
-                          (widget.assistantStore.isLoadingAssistantResponse ? 1 : 0),
+                          (widget.assistantStore.isLoadingAssistantResponse
+                              ? 1
+                              : 0),
                       cacheExtent: 500,
                       addAutomaticKeepAlives: false,
                       addRepaintBoundaries: true,
@@ -597,7 +628,8 @@ class _AssistantModalState extends State<AssistantModal>
                         return RepaintBoundary(
                           child: _buildMessageBubble(
                             widget.assistantStore.messages[index],
-                            index == widget.assistantStore.messages.length - 1 &&
+                            index ==
+                                    widget.assistantStore.messages.length - 1 &&
                                 !_isDontAnimateLastMsg,
                             index == 0,
                           ),
@@ -631,22 +663,25 @@ class _AssistantModalState extends State<AssistantModal>
                         ? Container(
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             child: _buildImage(
-                              widget.config.transitionLastFramePath ?? 'packages/meai_assistant/assets/images/me-assistant-last-frame.png',
+                              widget.config.transitionLastFramePath ??
+                                  'packages/meai_assistant/assets/images/me-assistant-last-frame.png',
                               width: 120,
                             ),
                           )
                         : Container(
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             child: Lottie.asset(
-                              widget.config.transitionLottiePath ?? 'packages/meai_assistant/assets/lottie/ai-transition-2.json',
+                              widget.config.transitionLottiePath ??
+                                  'packages/meai_assistant/assets/lottie/ai-transition-2.json',
                               repeat: false,
                             ),
                           ),
                   ],
                 ),
           Row(
-            mainAxisAlignment:
-                message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: message.isUser
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (message.isUser) const SizedBox(width: 40),
@@ -675,7 +710,8 @@ class _AssistantModalState extends State<AssistantModal>
                           textDirection: textDirectionForContent(message.text),
                           style: TextStyle(
                             fontSize: 15,
-                            color: widget.config.effectiveColorScheme.userMessageTextColor,
+                            color: widget.config.effectiveColorScheme
+                                .userMessageTextColor,
                             fontWeight: FontWeight.w300,
                             fontFamily: widget.config.fontFamily ?? 'ReadexPro',
                           ),
@@ -686,13 +722,15 @@ class _AssistantModalState extends State<AssistantModal>
                           speed: const Duration(milliseconds: 10),
                           showFullContentImmediately: message.isAnimated,
                           assistantResponse: message.assistantResponse,
-                          customObjectWidgetBuilder: widget.config.customObjectWidgetBuilder,
+                          customObjectWidgetBuilder:
+                              widget.config.customObjectWidgetBuilder,
                           fontFamily: widget.config.fontFamily,
                           lang: widget.config.lang,
                           textDirection: textDirectionForContent(message.text),
                           style: TextStyle(
                             fontSize: 15,
-                            color: widget.config.effectiveColorScheme.assistantMessageTextColor,
+                            color: widget.config.effectiveColorScheme
+                                .assistantMessageTextColor,
                             fontWeight: FontWeight.w300,
                             fontFamily: widget.config.fontFamily ?? 'ReadexPro',
                           ),
@@ -726,17 +764,17 @@ class _AssistantModalState extends State<AssistantModal>
               builder: (context, constraints) {
                 return SizedBox(
                   width: constraints.maxWidth,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const SizedBox(height: 15),
-                  for (String suggestion
-                      in message.assistantResponse!.suggestedResponses!)
-                    _buildSuggestionPrompt(suggestion),
-                  const SizedBox(height: 15),
-                ],
-              ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const SizedBox(height: 15),
+                      for (String suggestion
+                          in message.assistantResponse!.suggestedResponses!)
+                        _buildSuggestionPrompt(suggestion),
+                      const SizedBox(height: 15),
+                    ],
+                  ),
                 );
               },
             )
@@ -750,7 +788,7 @@ class _AssistantModalState extends State<AssistantModal>
     _typingStartTime = DateTime.now();
     _loadingMessage = MeAiLocalizations.analyzingMessage(widget.config.lang);
     _isTimerRunning = true;
-    
+
     // Use 1 second interval since we only check seconds
     _loadingMessageTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!widget.assistantStore.isLoadingAssistantResponse || !mounted) {
@@ -759,7 +797,7 @@ class _AssistantModalState extends State<AssistantModal>
         _isTimerRunning = false;
         return;
       }
-      
+
       final elapsed = DateTime.now().difference(_typingStartTime!);
       final seconds = elapsed.inSeconds;
       final lang = widget.config.lang;
@@ -774,7 +812,7 @@ class _AssistantModalState extends State<AssistantModal>
       } else {
         newMessage = MeAiLocalizations.preparingResponse(lang);
       }
-      
+
       if (newMessage != _loadingMessage && mounted) {
         setState(() {
           _loadingMessage = newMessage;
@@ -790,7 +828,8 @@ class _AssistantModalState extends State<AssistantModal>
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Lottie.asset(widget.config.typingIndicatorLottiePath ?? "packages/meai_assistant/assets/lottie/ai-loop-cropped.json"),
+          Lottie.asset(widget.config.typingIndicatorLottiePath ??
+              "packages/meai_assistant/assets/lottie/ai-loop-cropped.json"),
           const SizedBox(width: 12),
           Expanded(
             child: Shimmer.fromColors(
@@ -801,7 +840,8 @@ class _AssistantModalState extends State<AssistantModal>
                 textAlign: TextAlign.start,
                 style: TextStyle(
                   fontSize: 14,
-                  color: widget.config.effectiveColorScheme.assistantMessageTextColor,
+                  color: widget
+                      .config.effectiveColorScheme.assistantMessageTextColor,
                   fontWeight: FontWeight.w500,
                   fontFamily: widget.config.fontFamily ?? 'ReadexPro',
                 ),
@@ -819,105 +859,111 @@ class _AssistantModalState extends State<AssistantModal>
         final isBusy = widget.assistantStore.isLoadingAssistantResponse ||
             widget.assistantStore.isCreatingConversation;
         return Container(
-      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-      child: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: widget.config.effectiveColorScheme.inputBackgroundColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: widget.config.effectiveColorScheme.borderColor,
-                width: 1,
-              ),
-            ),
-            child: TextField(
-              controller: _textController,
-              maxLines: 5,
-              minLines: 1,
-              focusNode: _textFieldFocusNode,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendMessage(),
-              onEditingComplete: () {
-                setState(() {});
-              },
-              onChanged: (str) {
-                setState(() {});
-              },
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: widget.config.effectiveColorScheme.textColor,
-                fontFamily: widget.config.fontFamily ?? 'ReadexPro',
-              ),
-              decoration: InputDecoration(
-                hintText: widget.config.effectiveTextFieldHint,
-                hintStyle: TextStyle(
-                  color: widget.config.effectiveColorScheme.hintTextColor,
-                  fontSize: 13,
-                  fontFamily: widget.config.fontFamily ?? 'ReadexPro',
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                suffixIcon: _textController.text.isEmpty
-                    ? null
-                    : InkWell(
-                        onTap: isBusy ? null : _sendMessage,
-                        child: Container(
-                          margin: const EdgeInsets.all(10),
-                          child: Icon(
-                            Icons.send,
-                            size: 20,
-                            color: isBusy
-                                ? widget.config.effectiveColorScheme.hintTextColor
-                                : widget.config.effectiveColorScheme.primaryColor,
-                          ),
-                        ),
-                      ),
-                prefixIcon: Container(
-                  margin: const EdgeInsets.all(14),
-                  child: Image.asset(
-                    widget.config.suggestionIconPath ?? 'packages/meai_assistant/assets/images/ic_ai.png',
-                    width: 20,
-                    height: 20,
-                    color: widget.config.effectiveColorScheme.primaryColor,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        Icons.chat_bubble_outline,
-                    size: 20,
-                    color: widget.config.effectiveColorScheme.primaryColor,
-                      );
-                    },
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color:
+                      widget.config.effectiveColorScheme.inputBackgroundColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.config.effectiveColorScheme.borderColor,
+                    width: 1,
                   ),
                 ),
-              ),
-            ),
-          ),
-          ValueListenableBuilder<bool>(
-            valueListenable: _keyboardVisibleNotifier,
-            builder: (context, isKeyboardVisible, child) {
-              if (!isKeyboardVisible) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Text(
-                    MeAiLocalizations.footerText(widget.config.lang),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: widget.config.effectiveColorScheme.footerTextColor,
+                child: TextField(
+                  controller: _textController,
+                  maxLines: 5,
+                  minLines: 1,
+                  focusNode: _textFieldFocusNode,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendMessage(),
+                  onEditingComplete: () {
+                    setState(() {});
+                  },
+                  onChanged: (str) {
+                    setState(() {});
+                  },
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: widget.config.effectiveColorScheme.textColor,
+                    fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+                  ),
+                  decoration: InputDecoration(
+                    hintText: widget.config.effectiveTextFieldHint,
+                    hintStyle: TextStyle(
+                      color: widget.config.effectiveColorScheme.hintTextColor,
+                      fontSize: 13,
                       fontFamily: widget.config.fontFamily ?? 'ReadexPro',
                     ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    suffixIcon: _textController.text.isEmpty
+                        ? null
+                        : InkWell(
+                            onTap: isBusy ? null : _sendMessage,
+                            child: Container(
+                              margin: const EdgeInsets.all(10),
+                              child: Icon(
+                                Icons.send,
+                                size: 20,
+                                color: isBusy
+                                    ? widget.config.effectiveColorScheme
+                                        .hintTextColor
+                                    : widget.config.effectiveColorScheme
+                                        .primaryColor,
+                              ),
+                            ),
+                          ),
+                    prefixIcon: Container(
+                      margin: const EdgeInsets.all(14),
+                      child: Image.asset(
+                        widget.config.suggestionIconPath ??
+                            'packages/meai_assistant/assets/images/ic_ai.png',
+                        width: 20,
+                        height: 20,
+                        color: widget.config.effectiveColorScheme.primaryColor,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.chat_bubble_outline,
+                            size: 20,
+                            color:
+                                widget.config.effectiveColorScheme.primaryColor,
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
+                ),
+              ),
+              ValueListenableBuilder<bool>(
+                valueListenable: _keyboardVisibleNotifier,
+                builder: (context, isKeyboardVisible, child) {
+                  if (!isKeyboardVisible) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Text(
+                        MeAiLocalizations.footerText(widget.config.lang),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: widget
+                              .config.effectiveColorScheme.footerTextColor,
+                          fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
           ),
-        ],
-      ),
         );
       },
     );
@@ -936,7 +982,8 @@ class _AssistantModalState extends State<AssistantModal>
         width: screenWidth * 0.65,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: widget.config.effectiveColorScheme.suggestionCardBackgroundColor,
+          color:
+              widget.config.effectiveColorScheme.suggestionCardBackgroundColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: widget.config.effectiveColorScheme.suggestionCardBorderColor,
@@ -949,14 +996,16 @@ class _AssistantModalState extends State<AssistantModal>
             Container(
               padding: const EdgeInsets.only(top: 2),
               child: Image.asset(
-                widget.config.suggestionIconPath ?? 'packages/meai_assistant/assets/images/ic_ai.png',
+                widget.config.suggestionIconPath ??
+                    'packages/meai_assistant/assets/images/ic_ai.png',
                 width: 18,
                 color: widget.config.effectiveColorScheme.suggestionIconColor,
                 errorBuilder: (context, error, stackTrace) {
                   return Icon(
                     Icons.chat_bubble_outline,
                     size: 18,
-                    color: widget.config.effectiveColorScheme.suggestionIconColor,
+                    color:
+                        widget.config.effectiveColorScheme.suggestionIconColor,
                   );
                 },
               ),
@@ -992,7 +1041,8 @@ class _AssistantModalState extends State<AssistantModal>
         width: screenWidth * 0.6,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: widget.config.effectiveColorScheme.suggestionCardBackgroundColor,
+          color:
+              widget.config.effectiveColorScheme.suggestionCardBackgroundColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: widget.config.effectiveColorScheme.suggestionCardBorderColor,
@@ -1052,10 +1102,12 @@ class _AssistantModalState extends State<AssistantModal>
           margin: const EdgeInsets.symmetric(vertical: 5),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: widget.config.effectiveColorScheme.suggestionPromptBackgroundColor,
+            color: widget
+                .config.effectiveColorScheme.suggestionPromptBackgroundColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: widget.config.effectiveColorScheme.suggestionPromptBorderColor,
+              color: widget
+                  .config.effectiveColorScheme.suggestionPromptBorderColor,
               width: 1,
             ),
           ),
@@ -1082,13 +1134,14 @@ class _AssistantModalState extends State<AssistantModal>
         height: height,
         errorBuilder: (context, error, stackTrace) {
           return Image.asset(
-            widget.config.logoPath ?? 'packages/meai_assistant/assets/images/ai_button.png',
+            widget.config.logoPath ??
+                'packages/meai_assistant/assets/images/ai_button.png',
             width: width ?? 90,
-        errorBuilder: (context, error, stackTrace) {
-          return Icon(
+            errorBuilder: (context, error, stackTrace) {
+              return Icon(
                 Icons.chat_bubble_outline,
-            size: width ?? 90,
-            color: widget.config.effectiveColorScheme.primaryColor,
+                size: width ?? 90,
+                color: widget.config.effectiveColorScheme.primaryColor,
               );
             },
           );
@@ -1101,13 +1154,14 @@ class _AssistantModalState extends State<AssistantModal>
         height: height,
         errorBuilder: (context, error, stackTrace) {
           return Image.asset(
-            widget.config.logoPath ?? 'packages/meai_assistant/assets/images/ai_button.png',
+            widget.config.logoPath ??
+                'packages/meai_assistant/assets/images/ai_button.png',
             width: width ?? 90,
-        errorBuilder: (context, error, stackTrace) {
-          return Icon(
+            errorBuilder: (context, error, stackTrace) {
+              return Icon(
                 Icons.chat_bubble_outline,
-            size: width ?? 90,
-            color: widget.config.effectiveColorScheme.primaryColor,
+                size: width ?? 90,
+                color: widget.config.effectiveColorScheme.primaryColor,
               );
             },
           );
@@ -1116,4 +1170,3 @@ class _AssistantModalState extends State<AssistantModal>
     }
   }
 }
-
