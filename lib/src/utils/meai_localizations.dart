@@ -35,6 +35,31 @@ class MeAiLocalizations {
   static String defaultTextFieldHint(String lang) =>
       _isAr(lang) ? 'اسألني شيئاً...' : 'Ask something...';
 
+  // ── Voice assistant ───────────────────────────────────────────────────────
+
+  static String tapToSpeak(String lang) =>
+      _isAr(lang) ? 'اضغط للتحدث' : 'Tap to speak';
+
+  static String listening(String lang) =>
+      _isAr(lang) ? 'جاري الاستماع...' : 'Listening...';
+
+  static String transcribing(String lang) =>
+      _isAr(lang) ? 'جاري تحويل الصوت إلى نص...' : 'Transcribing...';
+
+  static String transcriptionFailed(String lang) => _isAr(lang)
+      ? 'تعذر التعرف على الصوت. حاول مرة أخرى.'
+      : "Couldn't understand the audio. Please try again.";
+
+  static String micPermissionDenied(String lang) => _isAr(lang)
+      ? 'يرجى السماح بالوصول إلى الميكروفون لاستخدام المساعد الصوتي.'
+      : 'Please allow microphone access to use voice input.';
+
+  static String stopSpeaking(String lang) =>
+      _isAr(lang) ? 'إيقاف القراءة' : 'Stop speaking';
+
+  static String speakReply(String lang) =>
+      _isAr(lang) ? 'قراءة الرد' : 'Speak reply';
+
   // ── Recurring transaction card ────────────────────────────────────────────
 
   static String recurringTrn(String lang) =>

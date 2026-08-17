@@ -136,9 +136,13 @@ class SendPromptRequest {
   final String conversationId;
   final String prompt;
 
+  /// How the prompt was produced: "text" (typed) or "voice" (transcribed).
+  final String inputType;
+
   SendPromptRequest({
     required this.conversationId,
     required this.prompt,
+    this.inputType = "text",
   });
 
   factory SendPromptRequest.fromRawJson(String str) =>
@@ -150,11 +154,35 @@ class SendPromptRequest {
       SendPromptRequest(
         conversationId: json["conversationId"] as String,
         prompt: json["prompt"] as String,
+        inputType: json["inputType"] as String? ?? "text",
       );
 
   Map<String, dynamic> toJson() => {
         "conversationId": conversationId,
         "prompt": prompt,
+        "inputType": inputType,
+      };
+}
+
+/// Transcription of a voice recording, returned by POST /api/ai-chat/transcribe
+class SpeechTranscription {
+  final String text;
+  final String? lang;
+
+  SpeechTranscription({
+    required this.text,
+    this.lang,
+  });
+
+  factory SpeechTranscription.fromJson(Map<String, dynamic> json) =>
+      SpeechTranscription(
+        text: json["text"] as String? ?? "",
+        lang: json["lang"] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        "text": text,
+        if (lang != null) "lang": lang,
       };
 }
 

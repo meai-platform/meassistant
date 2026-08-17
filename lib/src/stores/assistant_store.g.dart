@@ -91,6 +91,22 @@ mixin _$AssistantStore on _AssistantStore, Store {
     });
   }
 
+  late final _$isTranscribingAtom =
+      Atom(name: '_AssistantStore.isTranscribing', context: context);
+
+  @override
+  bool get isTranscribing {
+    _$isTranscribingAtom.reportRead();
+    return super.isTranscribing;
+  }
+
+  @override
+  set isTranscribing(bool value) {
+    _$isTranscribingAtom.reportWrite(value, super.isTranscribing, () {
+      super.isTranscribing = value;
+    });
+  }
+
   late final _$createConversationAsyncAction =
       AsyncAction('_AssistantStore.createConversation', context: context);
 
@@ -104,8 +120,19 @@ mixin _$AssistantStore on _AssistantStore, Store {
       AsyncAction('_AssistantStore.sendPrompt', context: context);
 
   @override
-  Future<AssistantResponse?> sendPrompt(String prompt) {
-    return _$sendPromptAsyncAction.run(() => super.sendPrompt(prompt));
+  Future<AssistantResponse?> sendPrompt(String prompt,
+      {String inputType = 'text'}) {
+    return _$sendPromptAsyncAction
+        .run(() => super.sendPrompt(prompt, inputType: inputType));
+  }
+
+  late final _$transcribeAudioAsyncAction =
+      AsyncAction('_AssistantStore.transcribeAudio', context: context);
+
+  @override
+  Future<SpeechTranscription?> transcribeAudio(String filePath) {
+    return _$transcribeAudioAsyncAction
+        .run(() => super.transcribeAudio(filePath));
   }
 
   late final _$_AssistantStoreActionController =
@@ -129,7 +156,8 @@ messages: ${messages},
 isLoadingAssistantResponse: ${isLoadingAssistantResponse},
 conversationId: ${conversationId},
 suggestedPrompts: ${suggestedPrompts},
-isCreatingConversation: ${isCreatingConversation}
+isCreatingConversation: ${isCreatingConversation},
+isTranscribing: ${isTranscribing}
     ''';
   }
 }

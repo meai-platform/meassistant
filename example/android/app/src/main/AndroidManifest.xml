@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Required by the meai_assistant voice assistant (mic recording) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="meai_assistant_example"
         android:name="${applicationName}"

@@ -95,6 +95,11 @@ class AssistantConfig {
   /// Enable debug logging throughout the SDK (default: false)
   final bool debug;
 
+  /// Enable the voice assistant (mic input + spoken replies, default: true).
+  /// When enabled, the host app MUST declare the microphone permission
+  /// (iOS: NSMicrophoneUsageDescription, Android: RECORD_AUDIO) — see README.
+  final bool voiceEnabled;
+
   const AssistantConfig({
     required this.assistantName,
     this.logoPath = 'packages/meai_assistant/assets/images/ai_button.png', // Default meAi assistant logo
@@ -132,6 +137,7 @@ class AssistantConfig {
     this.fontFamily,
     this.customObjectWidgetBuilder,
     this.debug = false,
+    this.voiceEnabled = true,
   });
 
   /// Whether the current language is Arabic (RTL).
@@ -220,6 +226,7 @@ class AssistantConfig {
     String? fontFamily,
     Widget? Function(String objectType, dynamic objectData)? customObjectWidgetBuilder,
     bool? debug,
+    bool? voiceEnabled,
   }) {
     return AssistantConfig(
       assistantName: assistantName ?? this.assistantName,
@@ -259,6 +266,7 @@ class AssistantConfig {
       fontFamily: fontFamily ?? this.fontFamily,
       customObjectWidgetBuilder: customObjectWidgetBuilder ?? this.customObjectWidgetBuilder,
       debug: debug ?? this.debug,
+      voiceEnabled: voiceEnabled ?? this.voiceEnabled,
     );
   }
 }

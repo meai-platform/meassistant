@@ -14,6 +14,7 @@ A Flutter plugin designed specifically for banks and financial institutions to e
 - ⌨️ **Keyboard Aware**: Automatically adjusts UI when keyboard appears for optimal user experience
 - 🔄 **State Management**: Robust MobX-based state management for reliable performance
 - 🎭 **Pre-built Themes**: Ready-to-use color schemes or create custom themes that match your bank's visual identity
+- 🎙️ **Voice Assistant**: Speak to the assistant and hear its replies — server-side speech-to-text and text-to-speech in both English and Arabic (Khaleeji)
 
 ## Installation
 
@@ -118,6 +119,74 @@ AssistantConfig(
   ],
 )
 ```
+
+### Voice Assistant
+
+The SDK supports voice conversations in English and Arabic (Khaleeji): a mic button
+next to the chat input records the customer's voice, the backend transcribes it
+(speech-to-text), the transcript goes through the normal assistant flow, and the
+reply is spoken back automatically (text-to-speech). Every assistant message also
+gets a speaker icon to replay it. All speech models run server-side and are
+configured in the backend, so they can be changed without updating the app.
+
+Voice is **enabled by default**. To disable it:
+
+```dart
+AssistantConfig(
+  // ...
+  voiceEnabled: false,
+)
+```
+
+#### Required platform permissions
+
+When voice is enabled (the default), the **host app** must declare the microphone
+permission, otherwise recording will fail (and iOS apps will crash when the
+permission is requested):
+
+**iOS** — add to `ios/Runner/Info.plist`:
+
+```xml
+<key>NSMicrophoneUsageDescription</key>
+<string>The assistant uses the microphone for voice questions.</string>
+```
+
+**Android** — add to `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+```
+
+**macOS** (if applicable) — add `NSMicrophoneUsageDescription` to
+`macos/Runner/Info.plist` (same as iOS), and add to both
+`macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`:
+
+```xml
+<key>com.apple.security.network.client</key>
+<true/>
+<key>com.apple.security.device.audio-input</key>
+<true/>
+```
+
+No permission is needed for playback of spoken replies. The bundled example app
+(`example/`) already declares all of the above.
+
+#### Spoken replies and custom objects
+
+Assistant answers can embed visual cards (transactions, saving goals, tables, ...)
+via `#OBJn#` placeholders inside `textResponse`. Spoken replies read **only the
+narrative text**: the placeholders are stripped before synthesis (in `mebank` and
+again in the SDK), and the cards remain on screen as usual. A message whose text
+consists solely of placeholders shows no speaker button and produces no audio.
+
+#### Voice endpoints used
+
+- `POST /api/ai-chat/transcribe` — multipart audio upload, returns `{ text, lang }`
+- `POST /api/ai-chat/prompt` — the transcript is sent with `inputType: "voice"`
+- `POST /api/ai-chat/synthesize` — returns audio bytes for an assistant reply
+
+The conversation language (`lang: "en"` / `"ar"`) is used as the speech recognition
+hint and selects the text-to-speech voice configured on the backend.
 
 ### Color Schemes
 
@@ -353,6 +422,9 @@ The plugin uses the following dependencies:
 - `lottie`: Animations (optional, for custom animations)
 - `flutter_keyboard_visibility`: Keyboard detection
 - `animate_do`: Animations
+- `record`: Microphone recording (voice input)
+- `just_audio`: Playback of spoken replies
+- `path_provider`: Temporary storage for voice recordings
 
 ## Troubleshooting
 
@@ -366,6 +438,13 @@ The plugin uses the following dependencies:
 1. Check your `baseUrl` is correct
 2. Verify authentication token is being returned
 3. Check network permissions in your app
+
+### Issue: Voice recording not starting
+
+**Solution:**
+1. Ensure the host app declares the microphone permission (see [Voice Assistant](#voice-assistant))
+2. Check the user granted microphone access in system settings
+3. If voice is not needed, set `voiceEnabled: false` in `AssistantConfig`
 
 ### Issue: Images not loading
 

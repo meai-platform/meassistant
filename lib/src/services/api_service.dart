@@ -121,5 +121,23 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// POST expecting a binary response body (e.g. synthesized speech audio)
+  Future<Response<List<int>>> postForBytes(
+      String endpoint, Map<String, dynamic> data) async {
+    _debugPrint('[MeAI SDK] 📤 POST (bytes) Request: $endpoint');
+    try {
+      final response = await _dio.post<List<int>>(
+        endpoint,
+        data: data,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      _debugPrint('[MeAI SDK] ✅ POST (bytes) Success: $endpoint');
+      return response;
+    } catch (e) {
+      _debugPrint('[MeAI SDK] ❌ POST (bytes) Failed: $endpoint - $e');
+      rethrow;
+    }
+  }
 }
 

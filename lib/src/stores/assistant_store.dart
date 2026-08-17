@@ -32,6 +32,9 @@ abstract class _AssistantStore with Store {
   @observable
   bool isCreatingConversation = false;
 
+  @observable
+  bool isTranscribing = false;
+
   @action
   Future<bool> createConversation() async {
     if (isCreatingConversation) {
@@ -77,7 +80,8 @@ abstract class _AssistantStore with Store {
   }
 
   @action
-  Future<AssistantResponse?> sendPrompt(String prompt) async {
+  Future<AssistantResponse?> sendPrompt(String prompt,
+      {String inputType = 'text'}) async {
     if (isLoadingAssistantResponse) {
       return null;
     }
@@ -94,7 +98,9 @@ abstract class _AssistantStore with Store {
 
     isLoadingAssistantResponse = true;
     try {
-      final result = await _assistantApiService.sendPrompt(conversationId!, prompt);
+      final result = await _assistantApiService.sendPrompt(
+          conversationId!, prompt,
+          inputType: inputType);
       isLoadingAssistantResponse = false;
       return result;
     } catch (err) {
@@ -170,6 +176,47 @@ abstract class _AssistantStore with Store {
     messages.clear();
     conversationId = null;
     suggestedPrompts = null;
+  }
+
+  /// Transcribe a recorded voice file to text via the backend.
+  /// Returns null when transcription fails (the caller shows a localized error).
+  @action
+  Future<SpeechTranscription?> transcribeAudio(String filePath) async {
+    if (isTranscribing) {
+      return null;
+    }
+    if (conversationId == null) {
+      final created = await createConversation();
+      if (!created) {
+        return null;
+      }
+    }
+    isTranscribing = true;
+    try {
+      final result =
+          await _assistantApiService.transcribeAudio(conversationId!, filePath);
+      isTranscribing = false;
+      if (result.text.trim().isEmpty) {
+        return null;
+      }
+      return result;
+    } catch (err) {
+      isTranscribing = false;
+      return null;
+    }
+  }
+
+  /// Fetch synthesized speech audio for an assistant reply.
+  /// Returns null when synthesis fails (reply stays text-only).
+  Future<List<int>?> synthesizeSpeech(String text) async {
+    if (conversationId == null || text.trim().isEmpty) {
+      return null;
+    }
+    try {
+      return await _assistantApiService.synthesizeSpeech(conversationId!, text);
+    } catch (err) {
+      return null;
+    }
   }
 }
 

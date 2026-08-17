@@ -10,7 +10,9 @@ import 'dart:ui';
 import '../config/assistant_config.dart';
 import '../models/assistant_response.dart';
 import '../services/assistant_service.dart';
+import '../services/voice_service.dart';
 import '../stores/assistant_store.dart';
+import '../utils/parse_utils.dart';
 import '../utils/text_direction_utils.dart';
 import '../utils/meai_localizations.dart';
 import 'typing_text.dart';
@@ -60,9 +62,18 @@ class _AssistantModalState extends State<AssistantModal>
   ReactionDisposer? _loadingStateReaction;
   Timer? _keyboardDebounceTimer;
 
+  // Voice assistant state
+  late final VoiceService _voiceService;
+  bool _isRecording = false;
+  Duration _recordingDuration = Duration.zero;
+  Timer? _recordingTimer;
+  int? _speakingMessageIndex;
+  bool _isFetchingSpeech = false;
+
   @override
   void initState() {
     super.initState();
+    _voiceService = VoiceService(debug: widget.config.debug);
     _loadingMessage = MeAiLocalizations.analyzingMessage(widget.config.lang);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 350),
@@ -156,12 +167,16 @@ class _AssistantModalState extends State<AssistantModal>
     _keyboardDebounceTimer?.cancel();
     _keyboardVisibleNotifier.dispose();
     _loadingStateReaction?.call();
+    _recordingTimer?.cancel();
+    _voiceService.dispose();
     super.dispose();
   }
 
   void _closeModal() {
     if (_isClosing) return;
     _isClosing = true;
+    _voiceService.cancelRecording();
+    _voiceService.stopPlayback();
     _animationController.reverse().then((_) {
       if (mounted) widget.assistantService.hideModal();
     });
@@ -170,6 +185,9 @@ class _AssistantModalState extends State<AssistantModal>
   void _startNewConversation() {
     if (widget.assistantStore.isLoadingAssistantResponse) return;
 
+    _voiceService.cancelRecording();
+    _voiceService.stopPlayback();
+    _recordingTimer?.cancel();
     widget.assistantStore.clearMessages();
     _conversationAnimationController.reset();
 
@@ -177,6 +195,9 @@ class _AssistantModalState extends State<AssistantModal>
       _isInConversation = false;
       _isDontAnimateLastMsg = false;
       _isAnimatingText = false;
+      _isRecording = false;
+      _speakingMessageIndex = null;
+      _isFetchingSpeech = false;
       _textController.clear();
       _loadingMessage = MeAiLocalizations.analyzingMessage(widget.config.lang);
     });
@@ -184,18 +205,21 @@ class _AssistantModalState extends State<AssistantModal>
     _createConversationIfNeeded();
   }
 
-  void _sendMessage() async {
-    if (_textController.text.trim().isEmpty) return;
+  void _sendMessage({String? overrideText, bool fromVoice = false}) async {
+    final rawText = overrideText ?? _textController.text;
+    if (rawText.trim().isEmpty) return;
     if (widget.assistantStore.isLoadingAssistantResponse ||
         widget.assistantStore.isCreatingConversation) {
       return;
     }
 
-    final userMessage = _textController.text.trim();
+    final userMessage = rawText.trim();
     _textController.clear();
     _textFieldFocusNode.unfocus();
+    await _voiceService.stopPlayback();
 
     setState(() {
+      _speakingMessageIndex = null;
       widget.assistantStore.messages.add(ChatMessage(
         text: userMessage,
         isUser: true,
@@ -216,9 +240,10 @@ class _AssistantModalState extends State<AssistantModal>
       _scrollToBottom();
     });
 
-    AssistantResponse? response =
-        await widget.assistantStore.sendPrompt(userMessage.trim());
+    AssistantResponse? response = await widget.assistantStore
+        .sendPrompt(userMessage, inputType: fromVoice ? 'voice' : 'text');
 
+    if (!mounted) return;
     setState(() {
       widget.assistantStore.messages.add(ChatMessage(
         text: response!.textResponse,
@@ -227,6 +252,151 @@ class _AssistantModalState extends State<AssistantModal>
         assistantResponse: response,
       ));
     });
+
+    // Voice-initiated prompts get a spoken reply automatically
+    if (fromVoice && widget.config.voiceEnabled && response != null) {
+      _speakMessage(
+          widget.assistantStore.messages.length - 1, response.textResponse);
+    }
+  }
+
+  // ── Voice input (record → transcribe → send) ─────────────────────────────
+
+  void _startVoiceRecording() async {
+    if (widget.assistantStore.isLoadingAssistantResponse ||
+        widget.assistantStore.isCreatingConversation ||
+        widget.assistantStore.isTranscribing ||
+        _isRecording) {
+      return;
+    }
+    _textFieldFocusNode.unfocus();
+    await _voiceService.stopPlayback();
+
+    final started = await _voiceService.startRecording();
+    if (!mounted) return;
+    if (!started) {
+      _showVoiceError(MeAiLocalizations.micPermissionDenied(widget.config.lang));
+      return;
+    }
+
+    setState(() {
+      _isRecording = true;
+      _speakingMessageIndex = null;
+      _recordingDuration = Duration.zero;
+    });
+    _recordingTimer?.cancel();
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || !_isRecording) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _recordingDuration += const Duration(seconds: 1);
+      });
+    });
+  }
+
+  void _cancelVoiceRecording() async {
+    _recordingTimer?.cancel();
+    await _voiceService.cancelRecording();
+    if (!mounted) return;
+    setState(() {
+      _isRecording = false;
+      _recordingDuration = Duration.zero;
+    });
+  }
+
+  void _stopVoiceRecordingAndSend() async {
+    _recordingTimer?.cancel();
+    final path = await _voiceService.stopRecording();
+    if (!mounted) return;
+    setState(() {
+      _isRecording = false;
+      _recordingDuration = Duration.zero;
+    });
+    if (path == null) {
+      _showVoiceError(MeAiLocalizations.transcriptionFailed(widget.config.lang));
+      return;
+    }
+
+    final transcription = await widget.assistantStore.transcribeAudio(path);
+    _voiceService.deleteRecording(path);
+    if (!mounted) return;
+
+    if (transcription == null) {
+      _showVoiceError(MeAiLocalizations.transcriptionFailed(widget.config.lang));
+      return;
+    }
+
+    _sendMessage(overrideText: transcription.text, fromVoice: true);
+  }
+
+  // ── Spoken replies (synthesize → play) ────────────────────────────────────
+
+  void _speakMessage(int messageIndex, String text) async {
+    if (_speakingMessageIndex == messageIndex) {
+      await _voiceService.stopPlayback();
+      if (!mounted) return;
+      setState(() {
+        _speakingMessageIndex = null;
+      });
+      return;
+    }
+    // Custom-object placeholders (#OBJn#) mark where visual cards render —
+    // strip them so only the narrative text is spoken.
+    text = ParseUtils.sanitizeForSpeech(text);
+    if (_isFetchingSpeech || text.isEmpty) return;
+
+    await _voiceService.stopPlayback();
+    if (!mounted) return;
+    setState(() {
+      _isFetchingSpeech = true;
+      _speakingMessageIndex = null;
+    });
+
+    final audio = await widget.assistantStore.synthesizeSpeech(text);
+    if (!mounted) return;
+    if (audio == null) {
+      // Synthesis unavailable — the reply stays text-only
+      setState(() {
+        _isFetchingSpeech = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isFetchingSpeech = false;
+      _speakingMessageIndex = messageIndex;
+    });
+    await _voiceService.playBytes(audio, onComplete: () {
+      if (mounted) {
+        setState(() {
+          _speakingMessageIndex = null;
+        });
+      }
+    });
+  }
+
+  void _showVoiceError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(
+            fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+            fontSize: 13,
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _formatRecordingDuration(Duration duration) {
+    final minutes = duration.inMinutes.toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 
   void _scrollToBottom() {
@@ -632,6 +802,7 @@ class _AssistantModalState extends State<AssistantModal>
                                     widget.assistantStore.messages.length - 1 &&
                                 !_isDontAnimateLastMsg,
                             index == 0,
+                            index,
                           ),
                         );
                       },
@@ -646,7 +817,8 @@ class _AssistantModalState extends State<AssistantModal>
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message, bool isLast, bool isFirst) {
+  Widget _buildMessageBubble(
+      ChatMessage message, bool isLast, bool isFirst, int index) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 0),
       child: Column(
@@ -755,6 +927,11 @@ class _AssistantModalState extends State<AssistantModal>
               ),
             ],
           ),
+          if (widget.config.voiceEnabled &&
+              !message.isUser &&
+              ParseUtils.sanitizeForSpeech(message.text).isNotEmpty &&
+              (message.isAnimated || !isLast))
+            _buildSpeakerButton(index, message.text),
           if (!_isAnimatingText &&
               isLast &&
               !message.isUser &&
@@ -853,11 +1030,55 @@ class _AssistantModalState extends State<AssistantModal>
     );
   }
 
+  /// Small speaker toggle shown under assistant messages when voice is enabled.
+  Widget _buildSpeakerButton(int index, String text) {
+    final isSpeakingThis = _speakingMessageIndex == index;
+    final lang = widget.config.lang;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: () => _speakMessage(index, text),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: _isFetchingSpeech && !isSpeakingThis
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color:
+                            widget.config.effectiveColorScheme.hintTextColor,
+                      ),
+                    )
+                  : Icon(
+                      isSpeakingThis
+                          ? Icons.stop_circle_outlined
+                          : Icons.volume_up_outlined,
+                      size: 18,
+                      semanticLabel: isSpeakingThis
+                          ? MeAiLocalizations.stopSpeaking(lang)
+                          : MeAiLocalizations.speakReply(lang),
+                      color: isSpeakingThis
+                          ? widget.config.effectiveColorScheme.primaryColor
+                          : widget.config.effectiveColorScheme.hintTextColor,
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInputArea() {
     return Observer(
       builder: (_) {
         final isBusy = widget.assistantStore.isLoadingAssistantResponse ||
             widget.assistantStore.isCreatingConversation;
+        final isTranscribing = widget.assistantStore.isTranscribing;
         return Container(
           padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
           child: Column(
@@ -872,7 +1093,11 @@ class _AssistantModalState extends State<AssistantModal>
                     width: 1,
                   ),
                 ),
-                child: TextField(
+                child: _isRecording
+                    ? _buildRecordingBar()
+                    : isTranscribing
+                        ? _buildTranscribingBar()
+                        : TextField(
                   controller: _textController,
                   maxLines: 5,
                   minLines: 1,
@@ -904,7 +1129,25 @@ class _AssistantModalState extends State<AssistantModal>
                       vertical: 12,
                     ),
                     suffixIcon: _textController.text.isEmpty
-                        ? null
+                        ? (widget.config.voiceEnabled
+                            ? InkWell(
+                                onTap: isBusy ? null : _startVoiceRecording,
+                                child: Container(
+                                  margin: const EdgeInsets.all(10),
+                                  child: Icon(
+                                    Icons.mic_none_outlined,
+                                    size: 20,
+                                    semanticLabel: MeAiLocalizations
+                                        .tapToSpeak(widget.config.lang),
+                                    color: isBusy
+                                        ? widget.config.effectiveColorScheme
+                                            .hintTextColor
+                                        : widget.config.effectiveColorScheme
+                                            .primaryColor,
+                                  ),
+                                ),
+                              )
+                            : null)
                         : InkWell(
                             onTap: isBusy ? null : _sendMessage,
                             child: Container(
@@ -966,6 +1209,100 @@ class _AssistantModalState extends State<AssistantModal>
           ),
         );
       },
+    );
+  }
+
+  /// Shown inside the input container while recording voice input.
+  Widget _buildRecordingBar() {
+    final lang = widget.config.lang;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: _cancelVoiceRecording,
+            icon: Icon(
+              Icons.close,
+              size: 20,
+              color: widget.config.effectiveColorScheme.hintTextColor,
+            ),
+          ),
+          const Icon(
+            Icons.mic,
+            size: 18,
+            color: Colors.redAccent,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Shimmer.fromColors(
+              baseColor:
+                  widget.config.effectiveColorScheme.assistantMessageTextColor,
+              highlightColor:
+                  widget.config.effectiveColorScheme.hintTextColor,
+              child: Text(
+                MeAiLocalizations.listening(lang),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+                ),
+              ),
+            ),
+          ),
+          Text(
+            _formatRecordingDuration(_recordingDuration),
+            style: TextStyle(
+              fontSize: 13,
+              color: widget.config.effectiveColorScheme.hintTextColor,
+              fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+            ),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            onPressed: _stopVoiceRecordingAndSend,
+            icon: Icon(
+              Icons.send,
+              size: 20,
+              color: widget.config.effectiveColorScheme.primaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Shown inside the input container while the recording is being transcribed.
+  Widget _buildTranscribingBar() {
+    final lang = widget.config.lang;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: widget.config.effectiveColorScheme.primaryColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Shimmer.fromColors(
+              baseColor:
+                  widget.config.effectiveColorScheme.assistantMessageTextColor,
+              highlightColor:
+                  widget.config.effectiveColorScheme.hintTextColor,
+              child: Text(
+                MeAiLocalizations.transcribing(lang),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontFamily: widget.config.fontFamily ?? 'ReadexPro',
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
