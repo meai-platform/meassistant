@@ -8,8 +8,9 @@ import 'package:record/record.dart';
 /// Service wrapping microphone recording (voice input) and audio playback
 /// (spoken assistant replies) for the voice assistant.
 ///
-/// Recording produces an AAC (.m4a) file that is uploaded for server-side
-/// transcription; playback takes the raw audio bytes returned by the
+/// Recording produces a 16 kHz mono WAV file that is uploaded for server-side
+/// transcription (accepted by Azure Speech F0 short-audio and OpenAI-compatible
+/// providers); playback takes the raw audio bytes returned by the
 /// server-side text-to-speech endpoint.
 class VoiceService {
   final AudioRecorder _recorder = AudioRecorder();
@@ -42,7 +43,7 @@ class VoiceService {
     }
   }
 
-  /// Start recording voice input to a temporary .m4a file.
+  /// Start recording voice input to a temporary 16 kHz mono WAV file.
   /// Returns true when recording actually started.
   Future<bool> startRecording() async {
     if (_isRecording) return true;
@@ -54,10 +55,10 @@ class VoiceService {
       await stopPlayback();
       final dir = await getTemporaryDirectory();
       final path =
-          '${dir.path}/meai_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          '${dir.path}/meai_voice_${DateTime.now().millisecondsSinceEpoch}.wav';
       await _recorder.start(
         const RecordConfig(
-          encoder: AudioEncoder.aacLc,
+          encoder: AudioEncoder.wav,
           sampleRate: 16000,
           numChannels: 1,
         ),
